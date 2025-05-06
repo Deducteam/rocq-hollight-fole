@@ -292,8 +292,11 @@ Lemma _204641_def : cons = (fun a0 : term => fun a1 : list_204637 => _mk_list_20
 Proof. ext t l. symmetry. exact (_mk_dest_list_204637 (cons t l)). Qed.
 
 (*****************************************************************************)
-(* aligning recursive functions on terms *)
+(* tactics to align recursive functions on terms *)
 (*****************************************************************************)
+
+(* identical to total_align, but specifically for functions
+   defined where the recursive call is done through List.map *)
 
 Ltac term_align1 :=
   align_ε' ; [ firstorder
@@ -569,7 +572,8 @@ Fixpoint termval {A : Type'} (M : Structure A) (v : N -> A) (t : term) : A :=
 
 Lemma termval_def {_185808 : Type'} : (@termval _185808) = (@ε ((prod N (prod N (prod N (prod N (prod N (prod N N)))))) -> (prod (_185808 -> Prop) (prod (N -> (list _185808) -> _185808) (N -> (list _185808) -> Prop))) -> (N -> _185808) -> term -> _185808) (fun termval' : (prod N (prod N (prod N (prod N (prod N (prod N N)))))) -> (prod (_185808 -> Prop) (prod (N -> (list _185808) -> _185808) (N -> (list _185808) -> Prop))) -> (N -> _185808) -> term -> _185808 => forall _205201 : prod N (prod N (prod N (prod N (prod N (prod N N))))), forall M : prod (_185808 -> Prop) (prod (N -> (list _185808) -> _185808) (N -> (list _185808) -> Prop)), forall v : N -> _185808, (forall x : N, (termval' _205201 M v (V x)) = (v x)) /\ (forall f : N, forall l : list term, (termval' _205201 M v (Fn f l)) = (@Fun _185808 M f (@List.map term _185808 (termval' _205201 M v) l)))) (@pair N (prod N (prod N (prod N (prod N (prod N N))))) (NUMERAL (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N N)))) (NUMERAL (BIT1 (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N N))) (NUMERAL (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N N)) (NUMERAL (BIT1 (BIT0 (BIT1 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N N) (NUMERAL (BIT0 (BIT1 (BIT1 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N N (NUMERAL (BIT1 (BIT0 (BIT0 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (NUMERAL (BIT0 (BIT0 (BIT1 (BIT1 (BIT0 (BIT1 (BIT1 N0))))))))))))))).
 Proof.
-  (* term_align doesn't work : quantification on M and v before the clauses, first time encountered. *)
+  (* term_align doesn't work : quantification on M and v before the clauses, first time encountered.
+     There is nothing in the HOL-Light definition that indicates that it would happen  *)
   align_ε'. firstorder.
   intros f' H H'. ext M v. destruct (H M v) as (HV , HFn).
   destruct (H' M v) as (HV' , HFn').
@@ -686,6 +690,10 @@ Proof.
   total_align2. unfold Basics.apply, id. now repeat rewrite IHform.
 Qed.
 
+(****************************************************************************)
+(* Conversion to prenex form. *)
+(****************************************************************************)
+
 Fixpoint qfree f :=
   match f with 
   | FAll _ _ => False 
@@ -695,54 +703,8 @@ Fixpoint qfree f :=
 Lemma qfree_def : qfree = (@ε ((prod N (prod N (prod N (prod N N)))) -> form -> Prop) (fun qfree' : (prod N (prod N (prod N (prod N N)))) -> form -> Prop => forall _215105 : prod N (prod N (prod N (prod N N))), ((qfree' _215105 FFalse) = True) /\ ((forall n : N, forall l : list term, (qfree' _215105 (Atom n l)) = True) /\ ((forall p : form, forall q : form, (qfree' _215105 (FImp p q)) = ((qfree' _215105 p) /\ (qfree' _215105 q))) /\ (forall x : N, forall p : form, (qfree' _215105 (FAll x p)) = False)))) (@pair N (prod N (prod N (prod N N))) (NUMERAL (BIT1 (BIT0 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N N)) (NUMERAL (BIT0 (BIT1 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N N) (NUMERAL (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N N (NUMERAL (BIT1 (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (NUMERAL (BIT1 (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0))))))))))))).
 Proof. total_align. Qed.
 
-Inductive prenex : form -> Prop :=
-| prenex_qfree : forall f, qfree f -> prenex f
-| prenex_forall : forall f n, prenex f -> prenex (FAll n f)
-| prenex_exists : forall f n, prenex f -> prenex (FEx n f).
-
-Lemma prenex_def : prenex = (fun a : form => forall prenex' : form -> Prop, (forall a' : form, ((qfree a') \/ ((exists x : N, exists p : form, (a' = (FAll x p)) /\ (prenex' p)) \/ (exists x : N, exists p : form, (a' = (FEx x p)) /\ (prenex' p)))) -> prenex' a') -> prenex' a).
-Proof.
-  ext f. apply prop_ext;intro H.
-  - intros prenex' prenex'def ; apply prenex'def. induction H.
-    2 : right ; left. 3 : right ; right. 
-    2,3 : exists n ; exists f ; split ;
-          [ reflexivity | now apply prenex'def ].
-    + now left.
-  - apply H ; clear H ; clear f.
-    intros f [qf | [(n , (f' , (all , IHf'))) | (n , (f' , (ex , IHf')))]].
-    + exact (prenex_qfree _ qf).
-    + rewrite all. exact (prenex_forall f' n IHf').
-    + rewrite ex. exact (prenex_exists f' n IHf').
-Qed.
-
-Inductive universal : form -> Prop :=
-| universal_qfree : forall f, qfree f -> universal f
-| universal_forall : forall f n, universal f -> universal (FAll n f).
-
-Lemma universal_def : universal = (fun a : form => forall universal' : form -> Prop, (forall a' : form, ((qfree a') \/ (exists x : N, exists p : form, (a' = (FAll x p)) /\ (universal' p))) -> universal' a') -> universal' a).
-Proof.
-  ext f. apply prop_ext;intro H.
-  - intros universal' universal'def ; apply universal'def. induction H.
-    + now left.
-    + right. exists n. exists f. split ; 
-      [ reflexivity | now apply universal'def ].
-  - apply H ; clear H ; clear f.
-    intros f [qf | (n , (f' , (all , IHf')))].
-    + exact (universal_qfree _ qf).
-    + rewrite all. exact (universal_forall f' n IHf').
-Qed.
-
-Fixpoint size f :=
-  match f with
-  | FFalse | Atom _ _ => 1
-  | FImp f f' => size f + size f'
-  | FAll n f => N.succ (size f) end.
-
-Lemma size_def : size = (@ε ((prod N (prod N (prod N N))) -> form -> N) (fun size' : (prod N (prod N (prod N N))) -> form -> N => forall _216494 : prod N (prod N (prod N N)), ((size' _216494 FFalse) = (NUMERAL (BIT1 N0))) /\ ((forall p : N, forall l : list term, (size' _216494 (Atom p l)) = (NUMERAL (BIT1 N0))) /\ ((forall q : form, forall r : form, (size' _216494 (FImp q r)) = (N.add (size' _216494 q) (size' _216494 r))) /\ (forall x : N, forall q : form, (size' _216494 (FAll x q)) = (N.add (NUMERAL (BIT1 N0)) (size' _216494 q)))))) (@pair N (prod N (prod N N)) (NUMERAL (BIT1 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N N) (NUMERAL (BIT1 (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N N (NUMERAL (BIT0 (BIT1 (BIT0 (BIT1 (BIT1 (BIT1 (BIT1 N0)))))))) (NUMERAL (BIT1 (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))))))).
-Proof.
-  total_align. now rewrite N.add_1_l.
-Qed.
-
+(* PPAT defines a function on prenex formulae, with the default value for all else being the value
+   for quantifier free formulae.  *)
 Definition PPAT {A : Type} (f1 f2 : N -> form -> A) (f3 : form -> A) (f : form) : A :=
   match f with
   | FAll n f' => f1 n f'
@@ -765,22 +727,12 @@ Definition PPAT {A : Type} (f1 f2 : N -> form -> A) (f3 : form -> A) (f : form) 
   | FImp (FAll n (FImp f' FFalse)) FFalse => f2 n f'
   | _ => f3 f end.
 
-  doesn't work. for FImp f4 f5 (where f5 <> FFalse), its value is
+  doesn't work. For FImp f4 f5 (where f5 <> FFalse), its value is
   "match f4 with
   | FFalse | _ => f3 (FImp f4 f5)
   end"
   which coq cannot even prove to be equal to itself for some reason
   *)
-
-Lemma COND_intro {A : Type'} (Q : Prop) (P : A -> Prop) (x y : A) :
-  (Q -> P x) -> (~Q -> P y) -> P (COND Q x y).
-Proof.
-  intros H H'. destruct (classic Q) as [ QT | QF ].
-  - replace Q with True. rewrite COND_True. exact (H QT).
-    symmetry. now rewrite is_True.
-  - replace Q with False. rewrite COND_False. exact (H' QF).
-    symmetry. now rewrite is_False.
-Qed.
 
 Lemma PPAT_def {_190311 : Type'} : (@PPAT _190311) = (fun _216511 : N -> form -> _190311 => fun _216512 : N -> form -> _190311 => fun _216513 : form -> _190311 => fun _216514 : form => @COND _190311 (exists x : N, exists p : form, _216514 = (FAll x p)) (_216511 (@ε N (fun x : N => exists p : form, _216514 = (FAll x p))) (@ε form (fun p : form => _216514 = (FAll (@ε N (fun x : N => exists p' : form, _216514 = (FAll x p'))) p)))) (@COND _190311 (exists x : N, exists p : form, _216514 = (FEx x p)) (_216512 (@ε N (fun x : N => exists p : form, _216514 = (FEx x p))) (@ε form (fun p : form => _216514 = (FEx (@ε N (fun x : N => exists p' : form, _216514 = (FEx x p'))) p)))) (_216513 _216514))).
 Proof.
@@ -797,35 +749,315 @@ Proof.
   - contradiction H'. exists n. now exists f.
 Qed.
 
-Definition Prenex_right : form -> form -> form := @ε ((prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))))))) -> form -> form -> form) (fun Prenex_right' : (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))))))) -> form -> form -> form => forall _216639 : prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N)))))))))), (forall p : form, forall x : N, forall q : form, (Prenex_right' _216639 p (FAll x q)) = (@Basics.apply N form (fun y : N => @id form (FAll y (Prenex_right' _216639 p (formsubst (@valmod term N (@pair N term x (V y)) V) q)))) (VARIANT (@Ensembles.Union N (free_variables p) (free_variables (FAll x q)))))) /\ ((forall p : form, forall x : N, forall q : form, (Prenex_right' _216639 p (FEx x q)) = (@Basics.apply N form (fun y : N => @id form (FEx y (Prenex_right' _216639 p (formsubst (@valmod term N (@pair N term x (V y)) V) q)))) (VARIANT (@Ensembles.Union N (free_variables p) (free_variables (FEx x q)))))) /\ (forall p : form, forall q : form, (qfree q) -> (Prenex_right' _216639 p q) = (FImp p q)))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N)))))))))) (NUMERAL (BIT0 (BIT0 (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))))) (NUMERAL (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N)))))))) (NUMERAL (BIT1 (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))) (NUMERAL (BIT0 (BIT1 (BIT1 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N N)))))) (NUMERAL (BIT1 (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N N))))) (NUMERAL (BIT0 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N N)))) (NUMERAL (BIT1 (BIT1 (BIT1 (BIT1 (BIT1 (BIT0 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N N))) (NUMERAL (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N N)) (NUMERAL (BIT1 (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N N) (NUMERAL (BIT1 (BIT1 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N N (NUMERAL (BIT0 (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (NUMERAL (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 (BIT1 (BIT1 N0))))))))))))))))))).
-Lemma Prenex_right_def : Prenex_right = (@ε ((prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))))))) -> form -> form -> form) (fun Prenex_right' : (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))))))) -> form -> form -> form => forall _216639 : prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N)))))))))), (forall p : form, forall x : N, forall q : form, (Prenex_right' _216639 p (FAll x q)) = (@Basics.apply N form (fun y : N => @id form (FAll y (Prenex_right' _216639 p (formsubst (@valmod term N (@pair N term x (V y)) V) q)))) (VARIANT (@Ensembles.Union N (free_variables p) (free_variables (FAll x q)))))) /\ ((forall p : form, forall x : N, forall q : form, (Prenex_right' _216639 p (FEx x q)) = (@Basics.apply N form (fun y : N => @id form (FEx y (Prenex_right' _216639 p (formsubst (@valmod term N (@pair N term x (V y)) V) q)))) (VARIANT (@Ensembles.Union N (free_variables p) (free_variables (FEx x q)))))) /\ (forall p : form, forall q : form, (qfree q) -> (Prenex_right' _216639 p q) = (FImp p q)))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N)))))))))) (NUMERAL (BIT0 (BIT0 (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))))) (NUMERAL (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N)))))))) (NUMERAL (BIT1 (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))) (NUMERAL (BIT0 (BIT1 (BIT1 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N N)))))) (NUMERAL (BIT1 (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N N))))) (NUMERAL (BIT0 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N N)))) (NUMERAL (BIT1 (BIT1 (BIT1 (BIT1 (BIT1 (BIT0 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N N))) (NUMERAL (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N N)) (NUMERAL (BIT1 (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N N) (NUMERAL (BIT1 (BIT1 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N N (NUMERAL (BIT0 (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (NUMERAL (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))))))))))))))).
-Proof. unfold Basics.apply, id. exact (eq_refl Prenex_right). Qed.
-Definition Prenex_left : form -> form -> form := @ε ((prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N)))))))))) -> form -> form -> form) (fun Prenex_left' : (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N)))))))))) -> form -> form -> form => forall _216680 : prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))))), (forall p : form, forall x : N, forall q : form, (Prenex_left' _216680 (FAll x q) p) = (@Basics.apply N form (fun y : N => @id form (FEx y (Prenex_left' _216680 (formsubst (@valmod term N (@pair N term x (V y)) V) q) p))) (VARIANT (@Ensembles.Union N (free_variables (FAll x q)) (free_variables p))))) /\ ((forall p : form, forall x : N, forall q : form, (Prenex_left' _216680 (FEx x q) p) = (@Basics.apply N form (fun y : N => @id form (FAll y (Prenex_left' _216680 (formsubst (@valmod term N (@pair N term x (V y)) V) q) p))) (VARIANT (@Ensembles.Union N (free_variables (FEx x q)) (free_variables p))))) /\ (forall p : form, forall q : form, (qfree q) -> (Prenex_left' _216680 q p) = (Prenex_right q p)))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))))) (NUMERAL (BIT0 (BIT0 (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N)))))))) (NUMERAL (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))) (NUMERAL (BIT1 (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N N)))))) (NUMERAL (BIT0 (BIT1 (BIT1 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N N))))) (NUMERAL (BIT1 (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N N)))) (NUMERAL (BIT0 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N N))) (NUMERAL (BIT1 (BIT1 (BIT1 (BIT1 (BIT1 (BIT0 (BIT1 N0)))))))) (@pair N (prod N (prod N N)) (NUMERAL (BIT0 (BIT0 (BIT1 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N N) (NUMERAL (BIT1 (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N N (NUMERAL (BIT0 (BIT1 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (NUMERAL (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))))))))))))).
-Lemma Prenex_left_def : Prenex_left = (@ε ((prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N)))))))))) -> form -> form -> form) (fun Prenex_left' : (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N)))))))))) -> form -> form -> form => forall _216680 : prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))))), (forall p : form, forall x : N, forall q : form, (Prenex_left' _216680 (FAll x q) p) = (@Basics.apply N form (fun y : N => @id form (FEx y (Prenex_left' _216680 (formsubst (@valmod term N (@pair N term x (V y)) V) q) p))) (VARIANT (@Ensembles.Union N (free_variables (FAll x q)) (free_variables p))))) /\ ((forall p : form, forall x : N, forall q : form, (Prenex_left' _216680 (FEx x q) p) = (@Basics.apply N form (fun y : N => @id form (FAll y (Prenex_left' _216680 (formsubst (@valmod term N (@pair N term x (V y)) V) q) p))) (VARIANT (@Ensembles.Union N (free_variables (FEx x q)) (free_variables p))))) /\ (forall p : form, forall q : form, (qfree q) -> (Prenex_left' _216680 q p) = (Prenex_right q p)))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))))) (NUMERAL (BIT0 (BIT0 (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N)))))))) (NUMERAL (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))) (NUMERAL (BIT1 (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N N)))))) (NUMERAL (BIT0 (BIT1 (BIT1 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N N))))) (NUMERAL (BIT1 (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N N)))) (NUMERAL (BIT0 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N N))) (NUMERAL (BIT1 (BIT1 (BIT1 (BIT1 (BIT1 (BIT0 (BIT1 N0)))))))) (@pair N (prod N (prod N N)) (NUMERAL (BIT0 (BIT0 (BIT1 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N N) (NUMERAL (BIT1 (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N N (NUMERAL (BIT0 (BIT1 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (NUMERAL (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 (BIT1 (BIT1 N0))))))))))))))))))).
-Proof. exact (eq_refl Prenex_left). Qed. 
-(*
-Fixpoint Prenex0 (f : form) : {f' : form | prenex f'} :=
+Inductive prenex : form -> Prop :=
+| prenex_qfree : forall f, qfree f -> prenex f
+| prenex_FAll : forall f n, prenex f -> prenex (FAll n f)
+| prenex_FEx : forall f n, prenex f -> prenex (FEx n f).
+
+Lemma prenex_def : prenex = (fun a : form => forall prenex' : form -> Prop, (forall a' : form, ((qfree a') \/ ((exists x : N, exists p : form, (a' = (FAll x p)) /\ (prenex' p)) \/ (exists x : N, exists p : form, (a' = (FEx x p)) /\ (prenex' p)))) -> prenex' a') -> prenex' a).
+Proof.
+  ind_align.
+  - exact (prenex_qfree x H).
+  - exact (prenex_FAll p x0 H0).
+  - exact (prenex_FEx p x0 H0).
+Qed.
+
+Inductive universal : form -> Prop :=
+| universal_qfree : forall f, qfree f -> universal f
+| universal_forall : forall f n, universal f -> universal (FAll n f).
+
+Lemma universal_def : universal = (fun a : form => forall universal' : form -> Prop, (forall a' : form, ((qfree a') \/ (exists x : N, exists p : form, (a' = (FAll x p)) /\ (universal' p))) -> universal' a') -> universal' a).
+Proof.
+  ind_align.
+  - exact (universal_qfree x H).
+  - exact (universal_forall p x0 H0).
+Qed.
+
+Fixpoint sizeN f :=
   match f with
-  | FImp f1 f2 => let c1 := Prenex0 f1 in 
-                  let c2 := Prenex0 f2 in
+  | FFalse | Atom _ _ => 1
+  | FImp f f' => sizeN f + sizeN f'
+  | FAll n f => N.succ (sizeN f) end.
 
-  Prenex_left (FAll x q) p) := let y := VARIANT (Union (free_variables (FAll x q)) (free_variables p)) in
-  FEx y (Prenex_left (formsubst (valmod (x , (V y)) V) q) p)
+Lemma size_def : sizeN = (@ε ((prod N (prod N (prod N N))) -> form -> N) (fun size' : (prod N (prod N (prod N N))) -> form -> N => forall _216494 : prod N (prod N (prod N N)), ((size' _216494 FFalse) = (NUMERAL (BIT1 N0))) /\ ((forall p : N, forall l : list term, (size' _216494 (Atom p l)) = (NUMERAL (BIT1 N0))) /\ ((forall q : form, forall r : form, (size' _216494 (FImp q r)) = (N.add (size' _216494 q) (size' _216494 r))) /\ (forall x : N, forall q : form, (size' _216494 (FAll x q)) = (N.add (NUMERAL (BIT1 N0)) (size' _216494 q)))))) (@pair N (prod N (prod N N)) (NUMERAL (BIT1 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N N) (NUMERAL (BIT1 (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N N (NUMERAL (BIT0 (BIT1 (BIT0 (BIT1 (BIT1 (BIT1 (BIT1 N0)))))))) (NUMERAL (BIT1 (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))))))).
+Proof.
+  total_align. now rewrite N.add_1_l.
+Qed. 
 
-  Prenex_left (FEx x q) p = let y := (VARIANT (Union (free_variables (FEx x q)) (free_variables p))) in
-  FAll y (Prenex_left (formsubst (valmod (x , (V y)) V) q) p)
+(* size is used for recursion in HOL-Light, but we'd rather have nat than N. *)
+Fixpoint size f :=
+  match f with
+  | FFalse | Atom _ _ => S O
+  | FImp f f' => (size f + size f')%nat
+  | FAll n f => S (size f) end.
 
-  qfree q -> (Prenex_left' _216680 q p) = (Prenex_right q p))) (* et pareille. normalement pas besoin de
-                                                                  match sur la preuve
-                                                                ( ce qui est évidemment impossible ) ? *)
+Lemma size_formsubst : forall f v, size (formsubst v f) = size f.
+Proof.
+  induction f ; intro v.
+  1,2 : reflexivity.
+  - simpl. now rewrite IHf1, IHf2.
+  - simpl. now rewrite IHf.
+Qed.
 
-  | FAll n f' => let c := Prenex0 f' in
-                 exist (proj1_sig c) (prenex_forall f' n (proj2_sig c))
-  | _ => exist _ f (prenex_qfree f I) *)
-Definition Prenex : form -> form := @ε ((prod N (prod N (prod N (prod N (prod N N))))) -> form -> form) (fun Prenex' : (prod N (prod N (prod N (prod N (prod N N))))) -> form -> form => forall _216688 : prod N (prod N (prod N (prod N (prod N N)))), ((Prenex' _216688 FFalse) = FFalse) /\ ((forall a : N, forall l : list term, (Prenex' _216688 (Atom a l)) = (Atom a l)) /\ ((forall p : form, forall q : form, (Prenex' _216688 (FImp p q)) = (Prenex_left (Prenex' _216688 p) (Prenex' _216688 q))) /\ (forall x : N, forall p : form, (Prenex' _216688 (FAll x p)) = (FAll x (Prenex' _216688 p)))))) (@pair N (prod N (prod N (prod N (prod N N)))) (NUMERAL (BIT0 (BIT0 (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N N))) (NUMERAL (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N N)) (NUMERAL (BIT1 (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N N) (NUMERAL (BIT0 (BIT1 (BIT1 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N N (NUMERAL (BIT1 (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (NUMERAL (BIT0 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 (BIT1 N0))))))))))))).
+Require Import Recdef FunInd.
+
+Function Prenex_right0 (f f' : form) {measure size f'} :=
+  match f' with
+  | FAll n f' => let y := VARIANT (Union (free_variables f) (free_variables (FAll n f')))
+                 in FAll y (Prenex_right0 f (formsubst (valmod (n , V y) V) f'))
+  | FImp f'0 f'1 => match f'1 with (* Case FEx n f' *) 
+                   | FFalse => match f'0 with
+                     | FAll n f'0 => match f'0 with
+                       | FImp f'1 f'2 => match f'2 with
+                         | FFalse => let y := VARIANT (Union (free_variables f) 
+                                       (free_variables (FEx n f'1)))
+                                     in FEx y (Prenex_right0 f (formsubst (valmod (n , V y) V) f'1))
+                         | _ => FImp f f' end
+                       | _ => FImp f f' end
+                     | _ => FImp f f' end
+                   | _ => FImp f f' end
+  | _ => FImp f f' end.
+Proof.
+  1 : intros f _ _ _ _ n _ f' _ _ _ _ _.
+  2 : intros f _ n f' _.
+  1,2 : rewrite size_formsubst ; simpl ; induction (size f') ;
+        [ auto | exact (le_n_S _ _ IHn0)]. 
+Qed.
+
+Lemma formsubst_qfree : forall f v, qfree f -> qfree (formsubst v f).
+Proof.
+  induction f;auto.
+  simpl. split. now apply IHf1. now apply IHf2.
+Qed.
+
+Lemma formsubst_prenex : forall f v, prenex f -> prenex (formsubst v f).
+Proof.
+  intros f v H. revert v. induction H ; intro v.
+  - exact (prenex_qfree _ (formsubst_qfree _ _ H)).
+  - exact (prenex_FAll _ _ (IHprenex _)).
+  - exact (prenex_FEx _ _ (IHprenex _)).
+Qed.
+
+Lemma Prenex_right0_prenex : forall f f', qfree f -> prenex f' -> prenex (Prenex_right0 f f').
+Proof.
+  intros f f' H H'. functional induction (Prenex_right0 f f').
+  3-7 : inversion H'.
+  3,5 : destruct (proj1 H0).
+  5,7,9 : now apply prenex_qfree.
+  3-8 : match goal with H : _ |- _ => now rewrite <- H in y end.
+  - apply prenex_FAll. apply IHf0. apply formsubst_prenex. now inversion H'.
+  - apply prenex_FEx. apply IHf0. apply formsubst_prenex.
+    inversion_clear H'. destruct (proj1 H0). assumption.
+Qed.
+
+Function Prenex_left0 (f' f : form) {measure size f} :=
+  match f with
+  | FAll n f => let y := VARIANT (Union (free_variables (FAll n f)) (free_variables f'))
+                in FEx y (Prenex_left0 f' (formsubst (valmod (n , V y) V) f))
+  | FImp f0 f1 => match f1 with (* Case FEx n f' *) 
+                   | FFalse => match f0 with
+                     | FAll n f0 => match f0 with
+                       | FImp f01 f02 => match f02 with
+                         | FFalse => let y := VARIANT (Union (free_variables (FEx n f01)) 
+                                       (free_variables f'))
+                                     in FAll y (Prenex_left0 f' (formsubst (valmod (n , V y) V) f01))
+                         | _ => Prenex_right0 f f' end
+                       | _ => Prenex_right0 f f' end
+                     | _ => Prenex_right0 f f' end
+                   | _ => Prenex_right0 f f' end
+  | _ => Prenex_right0 f f' end.
+Proof.
+  1 : intros f' _ _ _ _ n _ f _ _ _ _ _.
+  2 : intros f' _ n f _.
+  1,2 : rewrite size_formsubst ; simpl ; induction (size f) ;
+        [ auto | exact (le_n_S _ _ IHn0)].
+Qed.
+
+Lemma Prenex_left0_prenex : forall f f', prenex f -> prenex f' -> prenex (Prenex_left0 f' f).
+Proof.
+  intros f f' H H'. functional induction (Prenex_left0 f' f).
+  3-7 : inversion H ; try now apply Prenex_right0_prenex.
+  3-8 : match goal with H : _ |- _ => now rewrite <- H in y end.
+  - apply prenex_FEx. apply IHf0. apply formsubst_prenex. now inversion H.
+  - apply prenex_FAll. apply IHf0. apply formsubst_prenex.
+    inversion_clear H. destruct (proj1 H0). assumption.
+Qed.
+
+Definition Prenex_right : form -> form -> form := @ε ((prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))))))) -> form -> form -> form) (fun Prenex_right' : (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))))))) -> form -> form -> form => forall _216639 : prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N)))))))))), (forall p : form, forall x : N, forall q : form, (Prenex_right' _216639 p (FAll x q)) = (@Basics.apply N form (fun y : N => @id form (FAll y (Prenex_right' _216639 p (formsubst (@valmod term N (@pair N term x (V y)) V) q)))) (VARIANT (@Ensembles.Union N (free_variables p) (free_variables (FAll x q)))))) /\ ((forall p : form, forall x : N, forall q : form, (Prenex_right' _216639 p (FEx x q)) = (@Basics.apply N form (fun y : N => @id form (FEx y (Prenex_right' _216639 p (formsubst (@valmod term N (@pair N term x (V y)) V) q)))) (VARIANT (@Ensembles.Union N (free_variables p) (free_variables (FEx x q)))))) /\ (forall p : form, forall q : form, (qfree q) -> (Prenex_right' _216639 p q) = (FImp p q)))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N)))))))))) (NUMERAL (BIT0 (BIT0 (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))))) (NUMERAL (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N)))))))) (NUMERAL (BIT1 (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))) (NUMERAL (BIT0 (BIT1 (BIT1 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N N)))))) (NUMERAL (BIT1 (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N N))))) (NUMERAL (BIT0 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N N)))) (NUMERAL (BIT1 (BIT1 (BIT1 (BIT1 (BIT1 (BIT0 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N N))) (NUMERAL (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N N)) (NUMERAL (BIT1 (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N N) (NUMERAL (BIT1 (BIT1 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N N (NUMERAL (BIT0 (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (NUMERAL (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 (BIT1 (BIT1 N0))))))))))))))))))).
+
+Lemma Prenex_right_def : Prenex_right = (@ε ((prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))))))) -> form -> form -> form) (fun Prenex_right' : (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))))))) -> form -> form -> form => forall _216639 : prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N)))))))))), (forall p : form, forall x : N, forall q : form, (Prenex_right' _216639 p (FAll x q)) = (@Basics.apply N form (fun y : N => @id form (FAll y (Prenex_right' _216639 p (formsubst (@valmod term N (@pair N term x (V y)) V) q)))) (VARIANT (@Ensembles.Union N (free_variables p) (free_variables (FAll x q)))))) /\ ((forall p : form, forall x : N, forall q : form, (Prenex_right' _216639 p (FEx x q)) = (@Basics.apply N form (fun y : N => @id form (FEx y (Prenex_right' _216639 p (formsubst (@valmod term N (@pair N term x (V y)) V) q)))) (VARIANT (@Ensembles.Union N (free_variables p) (free_variables (FEx x q)))))) /\ (forall p : form, forall q : form, (qfree q) -> (Prenex_right' _216639 p q) = (FImp p q)))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N)))))))))) (NUMERAL (BIT0 (BIT0 (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))))) (NUMERAL (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N)))))))) (NUMERAL (BIT1 (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))) (NUMERAL (BIT0 (BIT1 (BIT1 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N N)))))) (NUMERAL (BIT1 (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N N))))) (NUMERAL (BIT0 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N N)))) (NUMERAL (BIT1 (BIT1 (BIT1 (BIT1 (BIT1 (BIT0 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N N))) (NUMERAL (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N N)) (NUMERAL (BIT1 (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N N) (NUMERAL (BIT1 (BIT1 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N N (NUMERAL (BIT0 (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (NUMERAL (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))))))))))))))).
+Proof. exact (eq_refl Prenex_right). Qed.
+
+Definition Prenex_left : form -> form -> form := @ε ((prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N)))))))))) -> form -> form -> form) (fun Prenex_left' : (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N)))))))))) -> form -> form -> form => forall _216680 : prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))))), (forall p : form, forall x : N, forall q : form, (Prenex_left' _216680 (FAll x q) p) = (@Basics.apply N form (fun y : N => @id form (FEx y (Prenex_left' _216680 (formsubst (@valmod term N (@pair N term x (V y)) V) q) p))) (VARIANT (@Ensembles.Union N (free_variables (FAll x q)) (free_variables p))))) /\ ((forall p : form, forall x : N, forall q : form, (Prenex_left' _216680 (FEx x q) p) = (@Basics.apply N form (fun y : N => @id form (FAll y (Prenex_left' _216680 (formsubst (@valmod term N (@pair N term x (V y)) V) q) p))) (VARIANT (@Ensembles.Union N (free_variables (FEx x q)) (free_variables p))))) /\ (forall p : form, forall q : form, (qfree q) -> (Prenex_left' _216680 q p) = (Prenex_right q p)))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))))) (NUMERAL (BIT0 (BIT0 (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N)))))))) (NUMERAL (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))) (NUMERAL (BIT1 (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N N)))))) (NUMERAL (BIT0 (BIT1 (BIT1 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N N))))) (NUMERAL (BIT1 (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N N)))) (NUMERAL (BIT0 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N N))) (NUMERAL (BIT1 (BIT1 (BIT1 (BIT1 (BIT1 (BIT0 (BIT1 N0)))))))) (@pair N (prod N (prod N N)) (NUMERAL (BIT0 (BIT0 (BIT1 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N N) (NUMERAL (BIT1 (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N N (NUMERAL (BIT0 (BIT1 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (NUMERAL (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))))))))))))).
+
+Lemma Prenex_left_def : Prenex_left = (@ε ((prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N)))))))))) -> form -> form -> form) (fun Prenex_left' : (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N)))))))))) -> form -> form -> form => forall _216680 : prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))))), (forall p : form, forall x : N, forall q : form, (Prenex_left' _216680 (FAll x q) p) = (@Basics.apply N form (fun y : N => @id form (FEx y (Prenex_left' _216680 (formsubst (@valmod term N (@pair N term x (V y)) V) q) p))) (VARIANT (@Ensembles.Union N (free_variables (FAll x q)) (free_variables p))))) /\ ((forall p : form, forall x : N, forall q : form, (Prenex_left' _216680 (FEx x q) p) = (@Basics.apply N form (fun y : N => @id form (FAll y (Prenex_left' _216680 (formsubst (@valmod term N (@pair N term x (V y)) V) q) p))) (VARIANT (@Ensembles.Union N (free_variables (FEx x q)) (free_variables p))))) /\ (forall p : form, forall q : form, (qfree q) -> (Prenex_left' _216680 q p) = (Prenex_right q p)))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))))) (NUMERAL (BIT0 (BIT0 (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N)))))))) (NUMERAL (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))) (NUMERAL (BIT1 (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N N)))))) (NUMERAL (BIT0 (BIT1 (BIT1 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N N))))) (NUMERAL (BIT1 (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N N)))) (NUMERAL (BIT0 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N N))) (NUMERAL (BIT1 (BIT1 (BIT1 (BIT1 (BIT1 (BIT0 (BIT1 N0)))))))) (@pair N (prod N (prod N N)) (NUMERAL (BIT0 (BIT0 (BIT1 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N N) (NUMERAL (BIT1 (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N N (NUMERAL (BIT0 (BIT1 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (NUMERAL (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 (BIT1 (BIT1 N0))))))))))))))))))).
+Proof. exact (eq_refl Prenex_left). Qed.
+
+Lemma partial_align_ε2'var {U A B C : Type'} {uv0 : U} {f : A -> B -> C}
+  {P : (U -> A -> B -> C) -> Prop} (QA : A -> Prop) (QB : B -> Prop) :
+  P (fun _ => f) -> (forall f' uv a b, P (fun _ => f) ->  P f' -> QA a -> QB b ->
+  f a b = f' uv a b) -> forall a b, QA a -> QB b -> f a b = ε P uv0 a b.
+Proof.
+  intros Hf Hunique a b. apply Hunique;auto.
+  apply ε_spec. now exists (fun _ => f).
+Qed.
+
+Lemma Prenex_right0_def : forall f f', prenex f' -> Prenex_right0 f f' = Prenex_right f f'.
+Proof.
+  intros p q Hq. apply (partial_align_ε2'var (fun _ => True) prenex);auto.
+  - intros _. repeat split.
+    1,2 : intros ; exact (Prenex_right0_equation _ _).
+    intros f0 f'0 QF. functional induction (Prenex_right0 f0 f'0);auto.
+    destruct QF. destruct (proj1 QF).
+  - clear p q Hq. intros f' uv p q Hf Hf' Hp Hq. 
+    destruct (Hf' uv) as (Hf'_all , (Hf'_ex , Hf'_qfree)). clear Hf'.
+    functional induction (Prenex_right0 p q).
+    + rewrite Hf'_all. rewrite IHf. reflexivity. apply formsubst_prenex.
+      now inversion Hq.
+    + unfold FEx,Not in Hf'_ex. rewrite Hf'_ex.
+      rewrite IHf. reflexivity. apply formsubst_prenex. inversion_clear Hq;auto.
+      destruct (proj1 H).
+    + inversion Hq. destruct (proj1 H). now rewrite <- H2 in y.
+    + inversion Hq. destruct (proj1 H). now rewrite <- H1 in y.
+    + inversion Hq. now rewrite Hf'_qfree. now rewrite <- H in y.
+    + inversion Hq. now rewrite Hf'_qfree. now rewrite <- H1 in y.
+    + inversion Hq. now rewrite Hf'_qfree. all : now rewrite <- H0 in y.
+Qed.
+
+(* The following definition is just Prenex_left0 but with default value Prenex_right
+   instead of Prenex_right0, because Prenex_left0 actually does not actually
+   respects the definition of Prenex_left, so this one is used as intermediary,
+   since it does. *)
+Function Prenex_left1 (f' f : form) {measure size f} :=
+  match f with
+  | FAll n f => let y := VARIANT (Union (free_variables (FAll n f)) (free_variables f'))
+                in FEx y (Prenex_left1 f' (formsubst (valmod (n , V y) V) f))
+  | FImp f0 f1 => match f1 with (* Case FEx n f' *) 
+                   | FFalse => match f0 with
+                     | FAll n f0 => match f0 with
+                       | FImp f01 f02 => match f02 with
+                         | FFalse => let y := VARIANT (Union (free_variables (FEx n f01)) 
+                                       (free_variables f'))
+                                     in FAll y (Prenex_left1 f' (formsubst (valmod (n , V y) V) f01))
+                         | _ => Prenex_right f f' end
+                       | _ => Prenex_right f f' end
+                     | _ => Prenex_right f f' end
+                   | _ => Prenex_right f f' end
+  | _ => Prenex_right f f' end.
+Proof.
+  1 : intros f' _ _ _ _ n _ f _ _ _ _ _.
+  2 : intros f' _ n f _.
+  1,2 : rewrite size_formsubst ; simpl ; induction (size f) ;
+        [ auto | exact (le_n_S _ _ IHn0)].
+Qed.
+
+Lemma Prenex_left0_def0 : forall f f', prenex f -> prenex f' -> Prenex_left0 f' f = Prenex_left1 f' f.
+Proof.
+  intros f f' Hf Hf'. functional induction (Prenex_left0 f' f).
+  1,2 : rewrite Prenex_left1_equation ; rewrite IHf0 ; auto.
+  1,2 : inversion Hf ; try contradiction ; apply formsubst_prenex ; auto.
+  now destruct H.
+  all : induction _x; try destruct y ; rewrite Prenex_left1_equation ;
+      now rewrite (Prenex_right0_def _ _ Hf').
+Qed.
+
+Lemma Prenex_left0_def : forall f f', prenex f -> prenex f' -> Prenex_left0 f' f = Prenex_left f f'.
+Proof.
+  intros f f' H H'. rewrite (Prenex_left0_def0 f f' H H').
+  revert f f' H H'. apply partial_align_ε2'var.
+  - intros _. repeat split.
+    1,2 : intros ; exact (Prenex_left1_equation _ _).
+    intros f0 f'0 QF.
+    functional induction (Prenex_left0 f0 f'0).
+    destruct QF.
+    1-3 : destruct (proj1 QF).
+    all : induction _x ; try (now destruct QF) ; now rewrite Prenex_left1_equation.
+  - intros f' uv p q Hf Hf' Hp Hq. 
+    destruct (Hf' uv) as (Hf'_all , (Hf'_ex , Hf'_qfree)). clear Hf'.
+    functional induction (Prenex_left1 q p).
+    + rewrite Hf'_all. rewrite IHf. reflexivity. apply formsubst_prenex.
+      now inversion Hp.
+    + unfold FEx,Not in Hf'_ex. rewrite Hf'_ex.
+      rewrite IHf. reflexivity. apply formsubst_prenex. inversion_clear Hp;auto.
+      destruct (proj1 H).
+    + inversion Hp. destruct (proj1 H). now rewrite <- H2 in y.
+    + inversion Hp. destruct (proj1 H). now rewrite <- H1 in y.
+    + inversion Hp. now rewrite Hf'_qfree. now rewrite <- H in y.
+    + inversion Hp. now rewrite Hf'_qfree. now rewrite <- H1 in y.
+    + inversion Hp. now rewrite Hf'_qfree. all : now rewrite <- H0 in y.
+Qed.
+
+Fixpoint Prenex (f : form) : form :=
+  match f with
+  | FAll n f => FAll n (Prenex f)
+  | FImp f f' => Prenex_left0 (Prenex f') (Prenex f)
+  | _ => f end.
+
+Lemma Prenex_def0 : forall f, prenex (Prenex f).
+Proof.
+  induction f.
+  1,2 : now apply prenex_qfree.
+  - now apply Prenex_left0_prenex.
+  - exact (prenex_FAll _ _ IHf).
+Qed.
+
 Lemma Prenex_def : Prenex = (@ε ((prod N (prod N (prod N (prod N (prod N N))))) -> form -> form) (fun Prenex' : (prod N (prod N (prod N (prod N (prod N N))))) -> form -> form => forall _216688 : prod N (prod N (prod N (prod N (prod N N)))), ((Prenex' _216688 FFalse) = FFalse) /\ ((forall a : N, forall l : list term, (Prenex' _216688 (Atom a l)) = (Atom a l)) /\ ((forall p : form, forall q : form, (Prenex' _216688 (FImp p q)) = (Prenex_left (Prenex' _216688 p) (Prenex' _216688 q))) /\ (forall x : N, forall p : form, (Prenex' _216688 (FAll x p)) = (FAll x (Prenex' _216688 p)))))) (@pair N (prod N (prod N (prod N (prod N N)))) (NUMERAL (BIT0 (BIT0 (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N N))) (NUMERAL (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N N)) (NUMERAL (BIT1 (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N N) (NUMERAL (BIT0 (BIT1 (BIT1 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N N (NUMERAL (BIT1 (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (NUMERAL (BIT0 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 (BIT1 N0)))))))))))))).
-Proof. exact (eq_refl Prenex). Qed.
+Proof.
+  total_align. simpl. rewrite Prenex_left0_def.
+  reflexivity. exact (Prenex_def0 p). exact (Prenex_def0 q).
+Qed.
 
+(*****************************************************************************)
+(* Propositional calculus *)
+(*****************************************************************************)
+
+Fixpoint pholds (TrueVar : Ensemble form) (f : form) : Prop :=
+  match f with
+  | FFalse => False
+  | FImp f f' => pholds TrueVar f -> pholds TrueVar f'
+  | _ => IN f TrueVar end.
+
+Lemma pholds_def : pholds = (@ε ((prod N (prod N (prod N (prod N (prod N N))))) -> (form -> Prop) -> form -> Prop) (fun pholds' : (prod N (prod N (prod N (prod N (prod N N))))) -> (form -> Prop) -> form -> Prop => forall _228069 : prod N (prod N (prod N (prod N (prod N N)))), (forall v : form -> Prop, (pholds' _228069 v FFalse) = False) /\ ((forall v : form -> Prop, forall p : N, forall l : list term, (pholds' _228069 v (Atom p l)) = (v (Atom p l))) /\ ((forall q : form, forall v : form -> Prop, forall r : form, (pholds' _228069 v (FImp q r)) = ((pholds' _228069 v q) -> pholds' _228069 v r)) /\ (forall v : form -> Prop, forall x : N, forall q : form, (pholds' _228069 v (FAll x q)) = (v (FAll x q)))))) (@pair N (prod N (prod N (prod N (prod N N)))) (NUMERAL (BIT0 (BIT0 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N N))) (NUMERAL (BIT0 (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N N)) (NUMERAL (BIT1 (BIT1 (BIT1 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N N) (NUMERAL (BIT0 (BIT0 (BIT1 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N N (NUMERAL (BIT0 (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (NUMERAL (BIT1 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))))))))).
+Proof. total_align. Qed.
+
+Definition psatisfies E E' := forall f, IN f E' -> pholds E f.
+Lemma psatisfies_def : psatisfies = (fun _228082 : form -> Prop => fun _228083 : form -> Prop => forall p : form, (@IN form p _228083) -> pholds _228082 p).
+Proof. exact (eq_refl psatisfies). Qed.
+
+Definition psatisfiable E' := exists E, psatisfies E E'.
+
+Lemma psatisfiable_def : psatisfiable = (fun _228094 : form -> Prop => exists v : form -> Prop, forall p : form, (@IN form p _228094) -> pholds v p).
+Proof. exact (eq_refl psatisfiable). Qed.
+
+Definition finsat (E : Ensemble form) : Prop := 
+  forall F, Included F E /\ FINITE F -> psatisfiable F.
+
+Lemma finsat_def : finsat = (fun _228106 : form -> Prop => forall B : form -> Prop, ((@Ensembles.Included form B _228106) /\ (@FINITE form B)) -> psatisfiable B).
+Proof. exact (eq_refl finsat). Qed.
+
+(*****************************************************************************)
+(* canonical models *)
+(*****************************************************************************)
+
+Inductive terms (functions : Ensemble (prod N N)) : term -> Prop :=
+| terms_V : forall n, terms functions (V n)
+| terms_Fn : forall n l, IN (n , lengthN l) functions ->
+    Forall (terms functions) l -> terms functions (Fn n l).
+
+Lemma terms_def : terms = (fun fns : (prod N N) -> Prop => fun a : term => forall terms' : term -> Prop, (forall a' : term, ((exists x : N, a' = (V x)) \/ (exists f : N, exists l : list term, (a' = (Fn f l)) /\ ((@IN (prod N N) (@pair N N f (@lengthN term l)) fns) /\ (@List.Forall term terms' l)))) -> terms' a') -> terms' a).
+Proof.
+  ext functions t. apply prop_ext ; intro H.
+  intros P' H'. induction t ; apply H'.
+  - now left;exists n.
+  - right. exists n. exists l. split;auto.
+    inversion_clear H. split;auto. clear H1.
+    induction l;auto. inversion_clear H0. inversion_clear H2. 
+    apply Forall_cons. now apply H. now apply IHl.
+  - apply H ; clear H ; clear t ; intros t H.
+    destruct H as [(n , eq) | (n , (l , (eq , (H , H'))))] ; rewrite eq.
+    + exact (terms_V functions n).
+    + exact (terms_Fn functions n l H H').
+Qed.
 
 (*****************************************************************************)
 (* retval : bool with a 3rd possibility, exception *)
@@ -860,12 +1092,6 @@ Proof. symmetry. exact (_mk_dest_retval (Some false)). Qed.
 
 Lemma Exception_def : None = (_mk_retval (@CONSTR Prop (N.succ (N.succ (NUMERAL N0))) (@ε Prop (fun x : Prop => True)) (fun n : N => @BOTTOM Prop))).
 Proof. symmetry. exact (_mk_dest_retval None). Qed.
-
-
-
-
-
-
 
 
 
