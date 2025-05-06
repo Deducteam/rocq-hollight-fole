@@ -722,15 +722,30 @@ builtin "formsubst" ≔ formsubst;
 builtin "formsubst_def" ≔ formsubst_def;
 builtin "qfree" ≔ qfree;
 builtin "qfree_def" ≔ qfree_def;
+builtin "PPAT" ≔ PPAT;
+builtin "PPAT_def" ≔ PPAT_def;
 builtin "prenex" ≔ prenex;
 builtin "prenex_def" ≔ prenex_def;
 builtin "universal" ≔ universal;
 builtin "universal_def" ≔ universal_def;
 builtin "size" ≔ size;
 builtin "size_def" ≔ size_def;
-builtin "PPAT" ≔ PPAT;
-builtin "PPAT_def" ≔ PPAT_def;
-
+builtin "Prenex_right" ≔ Prenex_right;
+builtin "Prenex_right_def" ≔ Prenex_right_def;
+builtin "Prenex_left" ≔ Prenex_left;
+builtin "Prenex_left_def" ≔ Prenex_left_def;
+builtin "Prenex" ≔ Prenex;
+builtin "Prenex_def" ≔ Prenex_def;
+builtin "pholds" ≔ Pholds;
+builtin "Pholds_def" ≔ Pholds_def;
+builtin "psatisfies" ≔ psatisfies;
+builtin "psatisfies_def" ≔ psatisfies_def;
+builtin "psatisfiable" ≔ psatisfiable;
+builtin "psatisfiable_def" ≔ psatisfiable_def;
+builtin "finsat" ≔ finsat;
+builtin "finsat_def" ≔ finsat_def;
+builtin "terms" ≔ terms;
+builtin "terms_def" ≔ terms_def;
 
 // retval
 builtin "option bool" ≔ retval;
