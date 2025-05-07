@@ -17,9 +17,9 @@ Arguments Singleton {U}.
 Arguments Add {U}.
 
 (* Eliminating useless GSPEC and SETSPEC combination *)
-Lemma SPEC_elim {A : Type'} {x : A} {P} : (GSPEC (fun x => exists x', SETSPEC x (P x') x') x) = P x.
+Lemma SPEC_elim {A : Type'} {P : A -> Prop} : GSPEC (fun x => exists x', SETSPEC x (P x') x') = P.
 Proof.
-  apply prop_ext ; intro H. destruct H as (x', (HP , e)). now subst x.
+  ext x. apply prop_ext ; intro H. destruct H as (x', (HP , e)). now subst x.
   now exists x.
 Qed.
 
@@ -49,12 +49,12 @@ Qed.
 Definition INTERS {A : Type'} : Ensemble (Ensemble A) -> Ensemble A := fun E x => forall y, In E y -> In y x.
 Lemma INTERS_def {A : Type'} : INTERS = (fun _32414 : (A -> Prop) -> Prop => @GSPEC A (fun GEN_PVAR_3 : A => exists x : A, @SETSPEC A GEN_PVAR_3 (forall u : A -> Prop, (@IN (A -> Prop) u _32414) -> @IN A x u) x)).
 Proof.
-  ext E x. symmetry. exact SPEC_elim.
+  ext E. symmetry. exact SPEC_elim.
 Qed.
 
 Lemma DIFF_def {A : Type'} : Setminus = (fun _32419 : A -> Prop => fun _32420 : A -> Prop => @GSPEC A (fun GEN_PVAR_4 : A => exists x : A, @SETSPEC A GEN_PVAR_4 ((@IN A x _32419) /\ (~ (@IN A x _32420))) x)).
 Proof.
-  ext B C x. symmetry. exact SPEC_elim.
+  ext B C. symmetry. exact SPEC_elim.
 Qed.
 
 Lemma DELETE_def {A : Type'} : Subtract = (fun _32431 : A -> Prop => fun _32432 : A => @GSPEC A (fun GEN_PVAR_6 : A => exists y : A, @SETSPEC A GEN_PVAR_6 ((@IN A y _32431) /\ (~ (y = _32432))) y)).
@@ -95,7 +95,7 @@ Definition IMAGE {A B : Type'} (f : A -> B) (E : Ensemble A) : Ensemble B :=
 
 Lemma IMAGE_def {A B : Type'} : (@IMAGE A B) = (fun _32493 : A -> B => fun _32494 : A -> Prop => @GSPEC B (fun GEN_PVAR_7 : B => exists y : B, @SETSPEC B GEN_PVAR_7 (exists x : A, (@IN A x _32494) /\ (y = (_32493 x))) y)).
 Proof.
-  ext f E y. symmetry. exact SPEC_elim.
+  ext f E. symmetry. exact SPEC_elim.
 Qed.
 
 Fixpoint list_Union {A : Type'} (l : list (A -> Prop)) : A -> Prop :=
@@ -1195,6 +1195,9 @@ Proof. exact (eq_refl SKOLEM). Qed.
 (* Propositional calculus *)
 (*****************************************************************************)
 
+(* Representing Propositional calculus in FOL by considering that every atomic formula
+   and every universally quantified formula is simply a propositional variable. *)
+
 Fixpoint pholds (TrueVar : Ensemble form) (f : form) : Prop :=
   match f with
   | FFalse => False
@@ -1242,6 +1245,33 @@ Proof.
     + exact (terms_V functions n).
     + exact (terms_Fn functions n l H H').
 Qed.
+
+Definition canonical (L : prod (Ensemble (prod N N)) (Ensemble (prod N N)))
+  (M : Structure term) := (Dom M = terms (fst L) /\ (forall n, Fun M n = Fn n)).
+
+Lemma canonical_def : canonical = (fun _230099 : prod ((prod N N) -> Prop) ((prod N N) -> Prop) => fun _230100 : prod (term -> Prop) (prod (N -> (list term) -> term) (N -> (list term) -> Prop)) => ((@Dom term _230100) = (terms (@fst ((prod N N) -> Prop) ((prod N N) -> Prop) _230099))) /\ (forall f : N, (@Fun term _230100 f) = (Fn f))).
+Proof. exact (eq_refl canonical). Qed.
+
+Lemma prop_of_model_def {_199383 : Type'} : holds = (fun _230111 : prod (_199383 -> Prop) (prod (N -> (list _199383) -> _199383) (N -> (list _199383) -> Prop)) => fun _230112 : N -> _199383 => fun _230113 : form => @holds _199383 _230111 _230112 _230113).
+Proof. exact (eq_refl (@holds _199383)). Qed.
+
+Definition canon_of_prop (L : prod (Ensemble (prod N N)) (Ensemble (prod N N)))
+  (Predval : form -> Prop)  := (terms (fst L), (Fn, fun (p : N) (l : list term) => Predval (Atom p l))).
+
+Lemma canon_of_prop_def : canon_of_prop = (fun _230132 : prod ((prod N N) -> Prop) ((prod N N) -> Prop) => fun _230133 : form -> Prop => @pair (term -> Prop) (prod (N -> (list term) -> term) (N -> (list term) -> Prop)) (terms (@fst ((prod N N) -> Prop) ((prod N N) -> Prop) _230132)) (@pair (N -> (list term) -> term) (N -> (list term) -> Prop) Fn (fun p : N => fun l : list term => _230133 (Atom p l)))).
+Proof. exact (eq_refl canon_of_prop). Qed.
+
+Definition term_of_num := finv num_of_term.
+
+Lemma term_of_num_def : term_of_num = (fun _230920 : N => @ε term (fun t : term => (num_of_term t) = _230920)).
+Proof. exact (eq_refl term_of_num). Qed.
+
+Definition LOWMOD (M : Structure term) : Structure N := (IMAGE num_of_term (Dom M), 
+  (fun n l => num_of_term (Fun M n (map term_of_num l)),
+  fun n l => Pred M n (map term_of_num l))).
+
+Lemma LOWMOD_def : LOWMOD = (fun _230925 : prod (term -> Prop) (prod (N -> (list term) -> term) (N -> (list term) -> Prop)) => @pair (N -> Prop) (prod (N -> (list N) -> N) (N -> (list N) -> Prop)) (@GSPEC N (fun GEN_PVAR_501 : N => exists t : term, @SETSPEC N GEN_PVAR_501 (@IN term t (@Dom term _230925)) (num_of_term t))) (@pair (N -> (list N) -> N) (N -> (list N) -> Prop) (fun g : N => fun zs : list N => num_of_term (@Fun term _230925 g (@List.map N term term_of_num zs))) (fun p : N => fun zs : list N => @Pred term _230925 p (@List.map N term term_of_num zs)))).
+Proof. exact (eq_refl LOWMOD). Qed.
 
 (*****************************************************************************)
 (* retval : bool with a 3rd possibility, exception *)

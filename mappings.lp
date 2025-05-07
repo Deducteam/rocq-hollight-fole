@@ -776,8 +776,8 @@ builtin "specialize" ≔ specialize;
 builtin "specialize_def" ≔ specialize_def;
 builtin "SKOLEM" ≔ SKOLEM;
 builtin "SKOLEM_def" ≔ SKOLEM_def;
-builtin "pholds" ≔ Pholds;
-builtin "Pholds_def" ≔ Pholds_def;
+builtin "pholds" ≔ pholds;
+builtin "pholds_def" ≔ pholds_def;
 builtin "psatisfies" ≔ psatisfies;
 builtin "psatisfies_def" ≔ psatisfies_def;
 builtin "psatisfiable" ≔ psatisfiable;
@@ -786,6 +786,16 @@ builtin "finsat" ≔ finsat;
 builtin "finsat_def" ≔ finsat_def;
 builtin "terms" ≔ terms;
 builtin "terms_def" ≔ terms_def;
+builtin "canonical" ≔ canonical;
+builtin "canonical_def" ≔ canonical_def;
+builtin "holds" ≔ prop_of_model;
+builtin "prop_of_model_def" ≔ prop_of_model_def;
+builtin "canon_of_prop" ≔ canon_of_prop;
+builtin "canon_of_prop_def" ≔ canon_of_prop_def;
+builtin "term_of_num" ≔ term_of_num;
+builtin "term_of_num_def" ≔ term_of_num_def;
+builtin "LOWMOD" ≔ LOWMOD;
+builtin "LOWMOD_def" ≔ LOWMOD_def;
 
 // retval
 builtin "option bool" ≔ retval;
