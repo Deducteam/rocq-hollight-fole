@@ -796,6 +796,26 @@ builtin "term_of_num" ≔ term_of_num;
 builtin "term_of_num_def" ≔ term_of_num_def;
 builtin "LOWMOD" ≔ LOWMOD;
 builtin "LOWMOD_def" ≔ LOWMOD_def;
+builtin "herbase" ≔ herbase;
+builtin "herbase_def" ≔ herbase_def;
+builtin "herbrand" ≔ herbrand;
+builtin "herbrand_def" ≔ herbrand_def;
+builtin "herbrand_of_prop" ≔ herbrand_of_prop;
+builtin "herbrand_of_prop_def" ≔ herbrand_of_prop_def;
+builtin "FEq" ≔ FEq;
+builtin "FEq_def" ≔ FEq_def;
+builtin "uclose" ≔ uclose;
+builtin "uclose_def" ≔ uclose_def;
+builtin "normal" ≔ normal;
+builtin "normal_def" ≔ normal_def;
+builtin "Varpairs" ≔ Varpairs;
+builtin "Varpairs_def" ≔ Varpairs_def;
+builtin "Eqaxiom_Func" ≔ Eqaxiom_Func;
+builtin "Eqaxiom_Func_def" ≔ Eqaxiom_Func_def;
+builtin "Eqaxiom_Pred" ≔ Eqaxiom_Pred;
+builtin "Eqaxiom_Pred_def" ≔ Eqaxiom_Pred_def;
+builtin "Eqaxioms" ≔ Eqaxioms;
+builtin "Eqaxioms_def" ≔ Eqaxioms_def;
 
 // retval
 builtin "option bool" ≔ retval;

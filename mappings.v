@@ -1274,6 +1274,124 @@ Lemma LOWMOD_def : LOWMOD = (fun _230925 : prod (term -> Prop) (prod (N -> (list
 Proof. exact (eq_refl LOWMOD). Qed.
 
 (*****************************************************************************)
+(* herbrand.ml *)
+(*****************************************************************************)
+
+Inductive herbase (functions : Ensemble (prod N N)) : term -> Prop :=
+| herbase_const : (~ exists k, IN (k,0) functions) -> herbase functions (V 0)
+| herbase_Fn : forall n l, IN (n , lengthN l) functions ->
+    Forall (herbase functions) l -> herbase functions (Fn n l).
+
+Lemma herbase_def : herbase = (fun fns : (prod N N) -> Prop => fun a : term => forall herbase' : term -> Prop, (forall a' : term, (((a' = (V (NUMERAL N0))) /\ (~ (exists c : N, @IN (prod N N) (@pair N N c (NUMERAL N0)) fns))) \/ (exists f : N, exists l : list term, (a' = (Fn f l)) /\ ((@IN (prod N N) (@pair N N f (@lengthN term l)) fns) /\ (@List.Forall term herbase' l)))) -> herbase' a') -> herbase' a).
+Proof.
+  ext functions t. apply prop_ext ; intro H.
+  intros P' H'. induction t ; apply H'.
+  - inversion H. now left.
+  - right. exists n. exists l.
+    inversion_clear H. repeat split;auto.
+    clear H1. induction l;auto. inversion_clear H0.
+    inversion_clear H2. apply Forall_cons;auto.
+  - apply H ; clear H ; clear t ; intros t H.
+    destruct H as [(eq , H) | (n , (l , (eq , (H , H'))))] ; rewrite eq.
+    + exact (herbase_const functions H).
+    + exact (herbase_Fn functions n l H H').
+Qed.
+
+Definition herbrand (L : prod (Ensemble (prod N N)) (Ensemble (prod N N)))
+  (M : Structure term) := (Dom M = herbase (fst L) /\ (forall n, Fun M n = Fn n)).
+
+Lemma herbrand_def : herbrand = (fun _232129 : prod ((prod N N) -> Prop) ((prod N N) -> Prop) => fun _232130 : prod (term -> Prop) (prod (N -> (list term) -> term) (N -> (list term) -> Prop)) => ((@Dom term _232130) = (herbase (@fst ((prod N N) -> Prop) ((prod N N) -> Prop) _232129))) /\ (forall f : N, (@Fun term _232130 f) = (Fn f))).
+Proof. exact (eq_refl herbrand). Qed.
+
+Definition herbrand_of_prop (L : prod (Ensemble (prod N N)) (Ensemble (prod N N)))
+  (Predval : form -> Prop)  := (herbase (fst L), (Fn, fun (p : N) (l : list term) => Predval (Atom p l))).
+
+Lemma herbrand_of_prop_def : herbrand_of_prop = (fun _232334 : prod ((prod N N) -> Prop) ((prod N N) -> Prop) => fun _232335 : form -> Prop => @pair (term -> Prop) (prod (N -> (list term) -> term) (N -> (list term) -> Prop)) (herbase (@fst ((prod N N) -> Prop) ((prod N N) -> Prop) _232334)) (@pair (N -> (list term) -> term) (N -> (list term) -> Prop) Fn (fun p : N => fun l : list term => _232335 (Atom p l)))).
+Proof. exact (eq_refl herbrand_of_prop). Qed.
+
+(*****************************************************************************)
+(* fole.ml : FOL with defined equality  *)
+(*****************************************************************************)
+
+Definition FEq t t' := Atom 0 (cons t (cons t' nil)).
+
+Lemma FEq_def : FEq = (fun _232588 : term => fun _232589 : term => Atom (NUMERAL N0) (@cons term _232588 (@cons term _232589 (@nil term)))).
+Proof. exact (eq_refl FEq). Qed.
+
+Definition uclose f := fold_right_with_perm_args FAll (list_of_set (free_variables f)) f.
+
+Lemma uclose_def : uclose = (fun _232600 : form => @fold_right_with_perm_args N form FAll (@list_of_set N (free_variables _232600)) _232600).
+Proof. exact (eq_refl uclose). Qed.
+
+Definition normal {A : Type'} functions (M : Structure A) :=
+  (forall t t' v, valuation M v /\ IN t (terms functions) /\ IN t' (terms functions) ->
+  holds M v (FEq t t') <-> (termval M v t = termval M v t')).
+
+Lemma normal_def {_201755 : Type'} : (@normal _201755) = (fun _232605 : (prod N N) -> Prop => fun _232606 : prod (_201755 -> Prop) (prod (N -> (list _201755) -> _201755) (N -> (list _201755) -> Prop)) => forall s : term, forall t : term, forall v : N -> _201755, ((@valuation _201755 _232606 v) /\ ((@IN term s (terms _232605)) /\ (@IN term t (terms _232605)))) -> (@holds _201755 _232606 v (FEq s t)) = ((@termval _201755 _232606 v s) = (@termval _201755 _232606 v t))).
+Proof.
+  ext functions M.
+  apply prop_ext;intros H t t' v H' ; apply H in H'.
+  now apply prop_ext_eq. now rewrite H'.
+Qed.
+
+Definition Varpairs n := (* could be defined without nat if needed, like repeatN but harder. *)
+  let fix Varpairsnat n :=
+    match n with
+    | O => nil
+    | S n => (V (N.double (N.of_nat n)) , V (N.succ_double (N.of_nat n))) :: (Varpairsnat n) end
+  in Varpairsnat (N.to_nat n).
+
+Lemma Varpairs_def : Varpairs = (@ε ((prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))) -> N -> list (prod term term)) (fun Varpairs' : (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))) -> N -> list (prod term term) => forall _232620 : prod N (prod N (prod N (prod N (prod N (prod N (prod N N)))))), ((Varpairs' _232620 (NUMERAL N0)) = (@nil (prod term term))) /\ (forall n : N, (Varpairs' _232620 (N.succ n)) = (@cons (prod term term) (@pair term term (V (N.mul (NUMERAL (BIT0 (BIT1 N0))) n)) (V (N.add (N.mul (NUMERAL (BIT0 (BIT1 N0))) n) (NUMERAL (BIT1 N0))))) (Varpairs' _232620 n)))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N N)))))) (NUMERAL (BIT0 (BIT1 (BIT1 (BIT0 (BIT1 (BIT0 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N N))))) (NUMERAL (BIT1 (BIT0 (BIT0 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N N)))) (NUMERAL (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N N))) (NUMERAL (BIT0 (BIT0 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N N)) (NUMERAL (BIT1 (BIT0 (BIT0 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N N) (NUMERAL (BIT1 (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N N (NUMERAL (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))) (NUMERAL (BIT1 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))))))))))).
+Proof.
+  unfold NUMERAL. N_rec_align. destruct n.
+  reflexivity. unfold Varpairs.
+  rewrite Nnat.N2Nat.inj_succ.
+  now rewrite Nnat.N2Nat.id.
+Qed.
+
+Definition FEqc c := FEq (fst c) (snd c).
+
+Lemma FEqc_exists : FEqc = ε (fun f : term * term -> form => forall s t : term, f (s, t) = FEq s t).
+Proof.
+  align_ε'. reflexivity.
+  intros Eq' _ H'. ext (t , t'). now rewrite H'.
+Qed.
+
+Definition Eqaxiom_Func (f : prod N N) := uclose
+  (FImp (fold_right FAnd FTrue (map FEqc (Varpairs (snd f))))
+    (FEq (Fn (fst f) (map fst (Varpairs (snd f)))) (Fn (fst f) (map snd (Varpairs (snd f)))))).
+
+Lemma Eqaxiom_Func_def : Eqaxiom_Func = (fun _232621 : prod N N => uclose (FImp (@fold_right_with_perm_args form form FAnd (@List.map (prod term term) form (@ε ((prod term term) -> form) (fun f : (prod term term) -> form => forall s : term, forall t : term, @eq form (f (@pair term term s t)) (FEq s t))) (Varpairs (@snd N N _232621))) FTrue) (FEq (Fn (@fst N N _232621) (@List.map (prod term term) term (@fst term term) (Varpairs (@snd N N _232621)))) (Fn (@fst N N _232621) (@List.map (prod term term) term (@snd term term) (Varpairs (@snd N N _232621))))))).
+Proof.
+  unfold Eqaxiom_Func. now rewrite FEqc_exists.
+Qed.
+
+Definition Eqaxiom_Pred (P : prod N N) := uclose
+  (FImp (fold_right FAnd FTrue (map FEqc (Varpairs (snd P))))
+    (FEquiv (Atom (fst P) (map fst (Varpairs (snd P)))) (Atom (fst P) (map snd (Varpairs (snd P)))))).
+
+Lemma Eqaxiom_Pred_def : Eqaxiom_Pred = (fun _232630 : prod N N => uclose (FImp (@fold_right_with_perm_args form form FAnd (@List.map (prod term term) form (@ε ((prod term term) -> form) (fun f : (prod term term) -> form => forall s : term, forall t : term, @eq form (f (@pair term term s t)) (FEq s t))) (Varpairs (@snd N N _232630))) FTrue) (FEquiv (Atom (@fst N N _232630) (@List.map (prod term term) term (@fst term term) (Varpairs (@snd N N _232630)))) (Atom (@fst N N _232630) (@List.map (prod term term) term (@snd term term) (Varpairs (@snd N N _232630))))))).
+Proof.
+  unfold Eqaxiom_Pred. now rewrite FEqc_exists.
+Qed.
+
+Definition FEq_refl := FAll 0 (FEq (V 0) (V 0)).
+
+Definition FEq_trans_sym := FAll 0 (FAll 1 (FAll 2 (FImp (FEq (V 0) (V 1))
+ (FImp (FEq (V 2) (V 1)) (FEq (V 0) (V 2)))))).
+
+Definition Eqaxioms (L : prod (Ensemble (prod N N)) (Ensemble (prod N N))) :=
+  Union (Singleton FEq_refl)
+    (Union (Singleton FEq_trans_sym)
+      (Union (IMAGE Eqaxiom_Func (fst L)) (IMAGE Eqaxiom_Pred (snd L)))).
+
+Lemma Eqaxioms_def : Eqaxioms = (fun _232639 : prod ((prod N N) -> Prop) ((prod N N) -> Prop) => @Ensembles.Union form (@INSERT form (FAll (NUMERAL N0) (FEq (V (NUMERAL N0)) (V (NUMERAL N0)))) (@Ensembles.Empty_set form)) (@Ensembles.Union form (@INSERT form (FAll (NUMERAL N0) (FAll (NUMERAL (BIT1 N0)) (FAll (NUMERAL (BIT0 (BIT1 N0))) (FImp (FEq (V (NUMERAL N0)) (V (NUMERAL (BIT1 N0)))) (FImp (FEq (V (NUMERAL (BIT0 (BIT1 N0)))) (V (NUMERAL (BIT1 N0)))) (FEq (V (NUMERAL N0)) (V (NUMERAL (BIT0 (BIT1 N0)))))))))) (@Ensembles.Empty_set form)) (@Ensembles.Union form (@GSPEC form (fun GEN_PVAR_508 : form => exists fa : prod N N, @SETSPEC form GEN_PVAR_508 (@IN (prod N N) fa (@fst ((prod N N) -> Prop) ((prod N N) -> Prop) _232639)) (Eqaxiom_Func fa))) (@GSPEC form (fun GEN_PVAR_509 : form => exists pa : prod N N, @SETSPEC form GEN_PVAR_509 (@IN (prod N N) pa (@snd ((prod N N) -> Prop) ((prod N N) -> Prop) _232639)) (Eqaxiom_Pred pa)))))).
+Proof.
+  ext L. unfold NUMERAL,Eqaxioms.
+  repeat f_equal ; now rewrite Singleton_from_Empty.
+Qed.
+
+(*****************************************************************************)
 (* retval : bool with a 3rd possibility, exception *)
 (*****************************************************************************)
 
