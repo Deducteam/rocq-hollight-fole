@@ -1,7 +1,227 @@
 Require Import HOLLight_Real_With_N.mappings HOLLight.mappings.
 Require Import Coq.NArith.BinNat.
+Require Import Reals.
 
 Set Bullet Behavior "Strict Subproofs".
+
+(*****************************************************************************)
+(* latest versions of automatic alignment tactics *)
+(*****************************************************************************)
+
+Lemma cases_equal {A B : Type} {f f' : A -> B} (* splits the goal into cases P and Q *)
+  (P Q : A -> Prop) (H : forall a, P a \/ Q a) (a : A) :
+  (P a -> f a = f' a) -> (Q a -> f a = f' a) -> f a = f' a.
+Proof.
+  intros HP HQ. destruct (H a);auto.
+Qed.
+
+Record partial_case {A : Type} := (* for a case to be fully automated, one needs to define
+                                     it inductively, while also defining its negation recursively,
+                                     and proving that they do cover all cases. *)
+  { case : A -> Prop ; negcase : A -> Prop ; cover_proof : forall a, case a \/ negcase a }.
+
+Lemma partial_align1_spec1 {U A B : Type'} {uv0 : U} {x : A}
+  (Q : A -> Prop) (f : U -> A -> B) (P : (U -> A -> B) -> Prop) :
+  P f -> (forall f' uv x, P f ->  P f' -> Q x ->
+  f uv x = f' uv x) -> Q x -> f uv0 x = ε P uv0 x.
+Proof.
+  intros Hf Hunique. apply Hunique;auto.
+  apply ε_spec. now exists f.
+Qed.
+
+Lemma partial_align1_spec2 {U A B C : Type'} {uv0 : U} {x : B} {y : A}
+  (Q : A -> Prop) (f : U -> B -> A -> C) (P : (U -> B -> A -> C) -> Prop) :
+  P f -> (forall f' uv x y, P f ->  P f' -> Q y ->
+  f uv x y = f' uv x y) -> Q y -> f uv0 x y = ε P uv0 x y.
+Proof.
+  intros Hf Hunique. apply Hunique;auto.
+  apply ε_spec. now exists f.
+Qed.
+
+Lemma partial_align1_spec3 {U A B C D : Type'} {uv0 : U} {x : B} {y : C} {z : A}
+  (Q : A -> Prop) (f : U -> B -> C -> A -> D) (P : (U -> B -> C -> A -> D) -> Prop) :
+  P f -> (forall f' uv x y z, P f ->  P f' -> Q z ->
+  f uv x y z = f' uv x y z) -> Q z -> f uv0 x y z = ε P uv0 x y z.
+Proof.
+  intros Hf Hunique. apply Hunique;auto.
+  apply ε_spec. now exists f.
+Qed.
+
+Ltac partial_align1_spec P x :=
+  match reverse goal with
+  | |- P x -> ?f x = ε _ _ x => apply (partial_align1_spec1 P (fun _ => f))
+  | |- P x -> ?f _ x = ε _ _ _ x => apply (partial_align1_spec2 P (fun _ => f))
+  | |- P x -> ?f _ _ x = ε _ _ _ _ x => apply (partial_align1_spec3 P (fun _ => f)) end ;
+  clear x ;
+  [ repeat split ; auto
+  | let f' := fresh "f'" in
+    let uv := fresh "uv" in
+    let H := fresh in
+    let H' := fresh "H'" in
+    let Px := fresh "Px" in
+    try intros f' uv y z x H H' Px ;
+    try (intros f' uv y x H H' Px ; try ext z) ;
+    try (intros f' uv x H H' Px ; try ext y ; try ext z) ;
+    induction Px ;
+    try full_destruct ;
+    repeat match goal with
+    H : _ |- _ => rewrite H end ;
+    auto ].
+
+Ltac palign_1var c nc cp x :=
+  let ncx := fresh in
+  apply (cases_equal c nc cp x) ;
+  [ partial_align1_spec c x
+  | intro ncx ; induction ncx ; auto ;
+    try now repeat match goal with H : _ |- _ => rewrite H end ].
+
+Lemma partial_align2_spec12 {U A B : Type'} {uv0 : U} {x y : A}
+  (Q : A -> Prop) (f : U -> A -> A -> B) (P : (U -> A -> A -> B) -> Prop) :
+  P f -> (forall f' uv x y, P f ->  P f' -> Q x -> Q y ->
+  f uv x y = f' uv x y) -> Q x -> Q y -> f uv0 x y = ε P uv0 x y.
+Proof.
+  intros Hf Hunique. apply Hunique;auto.
+  apply ε_spec. now exists f.
+Qed.
+
+Lemma partial_align2_spec23 {U A B C : Type'} {uv0 : U} {x : B} {y z : A}
+  (Q : A -> Prop) (f : U -> B -> A -> A -> C) (P : (U -> B -> A -> A -> C) -> Prop) :
+  P f -> (forall f' uv x y, P f ->  P f' -> Q y -> Q z ->
+  f uv x y z = f' uv x y z) -> Q y -> Q z -> f uv0 x y z = ε P uv0 x y z.
+Proof.
+  intros Hf Hunique. apply Hunique;auto.
+  apply ε_spec. now exists f.
+Qed.
+
+
+Ltac partial_align2_spec P x y :=
+  match goal with
+  | |- P x -> P y -> ?f x y = ε _ _ x y => apply (partial_align2_spec12 P (fun _ => f))
+  | |- P x -> P y -> ?f _ x y = ε _ _ _ x y => apply (partial_align2_spec23 P (fun _ => f)) end ;
+  try apply (partial_align2_spec12 P) ;
+  try apply (partial_align2_spec23 P) ;
+  clear x y ;
+  [ repeat split ; auto
+  | let f' := fresh "f'" in
+    let uv := fresh "uv" in
+    let z := fresh "z" in
+    let H := fresh in
+    let H' := fresh "H'" in
+    let Px := fresh "Px" in
+    let Py := fresh "Py" in
+    try intros f' uv z x y H H' Px Py ;
+    try (intros f' uv x y H H' Px Py ; try ext z) ;
+    induction Px ; induction Py ;
+    try full_destruct ;
+    repeat match goal with
+    H : _ |- _ => rewrite H end ;
+    auto ].
+
+Ltac palign_2var c nc cp x y :=
+  let Hx := fresh in
+  let Hy := fresh in
+  apply (cases_equal c nc cp y) ;
+  apply (cases_equal c nc cp x) ;
+  [ partial_align2_spec c x y
+  | intros Hx Hy ; induction Hx ; induction Hy ; auto ;
+    try now repeat match goal with H : _ |- _ => rewrite H end ].
+
+Lemma partial_align3_spec {U A B : Type'} {uv0 : U} {x y z : A}
+  (Q : A -> Prop) (f : U -> A -> A -> A -> B) (P : (U -> A -> A -> A -> B) -> Prop) :
+  P f -> (forall f' uv x y z, P f ->  P f' -> Q x -> Q y -> Q z ->
+  f uv x y z = f' uv x y z) -> Q x -> Q y -> Q z -> f uv0 x y z = ε P uv0 x y z.
+Proof.
+  intros Hf Hunique. apply Hunique;auto.
+  apply ε_spec. now exists f.
+Qed.
+
+
+Ltac partial_align3_spec P x y z :=
+  match goal with |- P x -> P y -> P z -> ?f x y z = ε _ _ x y z =>
+    apply (partial_align3_spec P (fun _ => f)) end ;
+  clear x y z ;
+  [ repeat split ; auto
+  | let f' := fresh "f'" in
+    let uv := fresh "uv" in
+    let H := fresh in
+    let H' := fresh "H'" in
+    let Px := fresh "Px" in
+    let Py := fresh "Py" in
+    let Pz := fresh "Pz" in
+    intros f' uv z x y H H' Px Py Pz ;
+    induction Px ; induction Py ; induction Pz ;
+    try full_destruct ;
+    repeat match goal with
+    H : _ |- _ => rewrite H end ;
+    auto ].
+
+Ltac palign_3var c nc cp x y z :=
+  let Hx := fresh in
+  let Hy := fresh in
+  let Hz := fresh in
+  apply (cases_equal c nc cp z) ;
+  apply (cases_equal c nc cp y) ;
+  apply (cases_equal c nc cp x) ;
+  [ partial_align3_spec c x y z
+  | intros Hx Hy Hz ; induction Hx ; induction Hy ; induction Hz ; auto ;
+    try now repeat match goal with H : _ |- _ => rewrite H end ].
+
+
+Ltac partial_align pcase := (* pcase must contain two inductive cases over some type A and a proof
+                               that these cases cover A. *)
+  let c := fresh "c" in
+  let nc := fresh "nc" in
+  let cp := fresh "cp" in
+  set (c := case pcase) ;
+  set (nc := negcase pcase) ;
+  set (cp := cover_proof pcase) ;
+  let x := fresh "x" in
+  let y := fresh "y" in
+  let z := fresh "z" in
+  ext x ;
+  ( ext y ;
+    ( ext z ; palign_3var c nc cp x y z +
+      palign_2var c nc cp y z +
+      palign_1var c nc cp z ) +
+    palign_2var c nc cp x y +
+    palign_1var c nc cp y ) +
+  palign_1var c nc cp x.
+
+Ltac breakgoal' H := (* trying to prove [rule1' a' \/ ... \/ rulen' a' -> P' a'] for some a' with hypothesis
+                       [P a] after induction on said hypothesis. *)
+  let rec breakgoal'' :=
+    match goal with
+    | |- _ \/ _ => left + right ; breakgoal''
+    | x : ?T |- exists _ : ?T, _ => exists x ; breakgoal'' (* the correct x1 ... xn should be directly given
+                                                             by the induction on [P a]. *)
+    | |- _ /\ _ => (repeat split) ; (try apply H) ; auto ; try assumption ; reflexivity
+         (* the reflexivity proves a = f x1 ... xn and therefore assures us that we are
+            in the correct disjunctive clause. We cannot be sure of what to do after,
+            so we only try tactics dealing with the easiest cases.  *)
+    | |- _ => (try now apply H) ; try assumption ; reflexivity
+        (* dealing with cases with no subterms. reflexivity is probably useless but
+           it's good to have a tactic that fails so that the tactic goes back to trying
+           other paths in the disjunction. *)
+    end
+  in breakgoal''.
+
+Ltac ind_align' :=
+  let x := fresh "x" in (* to replace with newer ind_align after the merge *)
+  let y := fresh "y" in
+  let z := fresh "z" in
+  let H := fresh in
+  try ext x ; try ext y ; try ext z ; apply prop_ext ; intro H ;
+  [ let P' := fresh "P'" in
+    let H' := fresh "H'" in
+    intros P' H' ; apply H' ; induction H ;
+    try breakgoal' H'
+  | apply H ; (* applying the HOL-Light definition to the coq version of P itself *)
+    clear H ; try clear x ; try clear y ; try clear z ;
+    try intros x y z H ; try intros x y H ; try intros x H ;
+    full_destruct ; try match goal with
+    H : _ |- _ => rewrite H (* not much to do, each clause should be proved with a rule,
+                               we just try to rewrite [a = f x1 ... xn] if it exists *)
+    end ; try now constructor ].
 
 (*****************************************************************************)
 (* Miscelaneous, set theory *)
@@ -23,10 +243,23 @@ Proof.
   now exists x.
 Qed.
 
+Definition IMAGE {A B : Type'} (f : A -> B) (E : Ensemble A) : Ensemble B :=
+  fun y => exists x, In E x /\ y = f x.
+
+Lemma IMAGE_def {A B : Type'} : (@IMAGE A B) = (fun _32493 : A -> B => fun _32494 : A -> Prop => @GSPEC B (fun GEN_PVAR_7 : B => exists y : B, @SETSPEC B GEN_PVAR_7 (exists x : A, (@IN A x _32494) /\ (y = (_32493 x))) y)).
+Proof.
+  ext f E. symmetry. exact SPEC_elim.
+Qed.
+
+(* Variant *)
+Lemma SPEC_IMAGE {A B : Type'} {f : A -> B} {E : Ensemble A} :
+  GSPEC (fun x => exists x', SETSPEC x (IN x' E) (f x')) = IMAGE f E.
+Proof. reflexivity. Qed.
+
 Lemma o_def {A B C : Type'} : Basics.compose = (fun f : B -> C => fun g : A -> B => fun x : A => f (g x)).
 Proof. reflexivity. Qed.
 
-Lemma I_def {A : Type'} : id = (fun x : A => x).
+Lemma I_def {A : Type'} : Datatypes.id = (fun x : A => x).
 Proof. reflexivity. Qed.
 
 Lemma let_clear {A B} : forall (f : A -> B) x, Basics.apply f x = (let y := x in f y).
@@ -37,7 +270,7 @@ Ltac let_clear := repeat rewrite let_clear.
 Lemma LET_def {A B : Type'} : Basics.apply = (fun f : A -> B => fun x : A => f x).
 Proof. ext f x. reflexivity. Qed.
 
-Lemma LET_END_def {A : Type'} : id = (fun t : A => t).
+Lemma LET_END_def {A : Type'} : Datatypes.id = (fun t : A => t).
 Proof. reflexivity. Qed.
 
 Lemma UNION_def {A : Type'} : Union = (fun _32385 : A -> Prop => fun _32386 : A -> Prop => @GSPEC A (fun GEN_PVAR_0 : A => exists x : A, @SETSPEC A GEN_PVAR_0 ((@IN A x _32385) \/ (@IN A x _32386)) x)).
@@ -90,14 +323,6 @@ Proof.
   rewrite H ; now rewrite Singleton_from_Empty.
 Qed.
 
-Definition IMAGE {A B : Type'} (f : A -> B) (E : Ensemble A) : Ensemble B :=
-  fun y => exists x, In E x /\ y = f x.
-
-Lemma IMAGE_def {A B : Type'} : (@IMAGE A B) = (fun _32493 : A -> B => fun _32494 : A -> Prop => @GSPEC B (fun GEN_PVAR_7 : B => exists y : B, @SETSPEC B GEN_PVAR_7 (exists x : A, (@IN A x _32494) /\ (y = (_32493 x))) y)).
-Proof.
-  ext f E. symmetry. exact SPEC_elim.
-Qed.
-
 Fixpoint list_Union {A : Type'} (l : list (A -> Prop)) : A -> Prop :=
   match l with
   | nil => Empty_set
@@ -128,26 +353,8 @@ Inductive TC {A : Type} (R : A -> A -> Prop) : A -> A -> Prop :=
  | TC_trans : forall x y z, TC R x y -> TC R y z -> TC R x z.
 
 Lemma TC_def {A : Type'} : (@TC A) = (fun R' : A -> A -> Prop => fun a0 : A => fun a1 : A => forall TC' : A -> A -> Prop, (forall a0' : A, forall a1' : A, ((R' a0' a1') \/ (exists y : A, (TC' a0' y) /\ (TC' y a1'))) -> TC' a0' a1') -> TC' a0 a1).
-Proof. ext R.
-  let x := fresh "x" in (* to replace with newer ind_align after the merge *)
-  let y := fresh "y" in
-  let z := fresh "z" in
-  let H := fresh in
-  try ext x ; try ext y ; try ext z ; apply prop_ext ; intro H ;
-  [ let P' := fresh "P'" in
-    let H' := fresh "H'" in
-    intros P' H' ; apply H' ; induction H ;
-    try breakgoal H'
-  | apply H ; (* applying the HOL-Light definition to the coq version of P itself *)
-    clear H ; try clear x ; try clear y ; try clear z
-    try intros x y z H ; try intros x y H ; try intros x H ;
-    full_destruct ; try match goal with
-    H : _ |- _ => rewrite H (* not much to do, each clause should be proved with a rule,
-                               we just try to rewrite [a = f x1 ... xn] if it exists *)
-    end ].
-  - right. exists y. split ; now apply H'.
-  - exact (TC_R R x y H).
-  - exact (TC_trans R x y0 y H H0).
+Proof.
+  ext R. ind_align'. exact (TC_trans R x y0 y H H0).
 Qed.
 
 Fixpoint FILTER {A : Type'} (P : A -> Prop) l :=
@@ -163,40 +370,6 @@ Definition MEASURE {A : Type} f (x y : A) := f x < f y.
 Lemma MEASURE_def {A : Type'} : (@MEASURE A) = (fun _8094 : A -> N => fun x : A => fun y : A => N.lt (_8094 x) (_8094 y)).
 Proof. exact (eq_refl (@MEASURE A)). Qed.
 
-(*****************************************************************************)
-(* Multisets *)
-(*****************************************************************************)
-
-(* Did not manage to map to coq multisets : recquires boolean decidable equality *)
-
-Definition Multiset (A : Type') := arr A N.
-
-Definition multiset {A : Type'} : (A -> N) -> Multiset A := id.
-Definition multiplicity {A : Type'} : Multiset A -> A -> N := id.
-
-Definition mempty {A : Type'} : Multiset A := fun _ => 0.
-Lemma mempty_def {_183533 : Type'} : mempty = (@multiset _183533 (fun b : _183533 => NUMERAL N0)).
-Proof. reflexivity. Qed.
-
-Definition mmember {A : Type'} (a : A) (m : Multiset A) := m a <> 0.
-Lemma mmember_def {_183543 : Type'} : mmember = (fun _203992 : _183543 => fun _203993 : Multiset _183543 => ~ ((@multiplicity _183543 _203993 _203992) = (NUMERAL N0))).
-Proof. reflexivity. Qed.
-
-Definition msing {A : Type'} : A -> Multiset A := fun a a' => COND (a'=a) 1 0.
-
-Lemma msing_def {_183559 : Type'} : msing = (fun _204004 : _183559 => @multiset _183559 (fun b : _183559 => @COND N (b = _204004) (NUMERAL (BIT1 N0)) (NUMERAL N0))).
-Proof. reflexivity. Qed.
-
-Definition munion {A : Type'} := fun (m m' : Multiset A) a => m a + (m' a). 
-
-Lemma munion_def {_183578 : Type'} : (@munion _183578) = (fun _204009 : Multiset _183578 => fun _204010 : Multiset _183578 => @multiset _183578 (fun b : _183578 => N.add (@multiplicity _183578 _204009 b) (@multiplicity _183578 _204010 b))).
-Proof. reflexivity. Qed.
-
-Definition mdiff {A : Type'} := fun (m m' : Multiset A) a => m a - (m' a). 
-
-Lemma mdiff_def {_183597 : Type'} : (@mdiff _183597) = (fun _204021 : Multiset _183597 => fun _204022 : Multiset _183597 => @multiset _183597 (fun b : _183597 => N.sub (@multiplicity _183597 _204021 b) (@multiplicity _183597 _204022 b))).
-Proof. reflexivity. Qed.
-
 Lemma WFP_def {_184264 : Type'} : @Acc _184264 = (fun lt2' : _184264 -> _184264 -> Prop => fun a : _184264 => forall WFP' : _184264 -> Prop, (forall a' : _184264, (forall y : _184264, (lt2' y a') -> WFP' y) -> WFP' a') -> WFP' a).
 Proof.
   ext R a. apply prop_ext;intro H.
@@ -204,13 +377,186 @@ Proof.
   - apply H. intro x. exact (Acc_intro _).
 Qed.
 
+(*****************************************************************************)
+(* Metric spaces (Libraries/analysis.ml) *)
+(*****************************************************************************)
+(* Difference with coq : Base is an argument instead of a projection *)
+
+(* Cannot mannage to map to a subtype of Metric_Space : Universe Inconsistency *)
+
+Definition discrete_metric A (c : prod A A) : R := COND (fst c=snd c) 0%R 1%R.
+
+Lemma discr_pos A : forall x y, (discrete_metric A (x,y) >= 0)%R.
+Proof.
+  intros. unfold discrete_metric. apply COND_intro. reflexivity.
+  left. exact Rlt_0_1.
+Qed.
+
+Lemma discr_sym A : forall x y, discrete_metric A (x,y) = discrete_metric A (y,x).
+Proof.
+  intros. unfold discrete_metric. do 2 apply COND_intro.
+  1,4 : reflexivity.
+  intros nH H. 2 : intros H nH.
+  all : symmetry in H ; destruct (nH H).
+Qed.
+
+Lemma discr_refl A : forall x y, discrete_metric A (x,y) = 0%R <-> x = y.
+Proof.
+  intros. unfold discrete_metric. apply COND_intro;split;intro F;auto.
+  destruct (R1_neq_R0 F). contradiction.
+Qed.
+
+Require Import Lra.
+Lemma discr_tri A : forall x y z,
+  (discrete_metric A (x,y) <= discrete_metric A (x,z) + discrete_metric A (z,y))%R.
+Proof.
+  intros. unfold discrete_metric. do 3 apply COND_intro;try lra.
+  intros eq1 eq2 neq. destruct (neq (eq_trans eq2 eq1)).
+Qed.
+
+(* Attempt with dependant type equality, not quite a success yet *)
+(*
+Record Metric (A : Type') := { mdist : prod A A -> R;
+    mdist_pos : forall x y : A, (mdist (x,y) >= 0)%R;
+    mdist_sym : forall x y : A, mdist (x,y) = mdist (y,x);
+    mdist_refl : forall x y : A, mdist (x,y) = 0%R <-> x = y;
+    mdist_tri : forall x y z : A, (mdist (x,y) <= mdist (x,z) + mdist (z,y))%R }.
+
+Definition discrete (A : Type') :=
+  {| mdist := discrete_metric A;
+     mdist_pos := discr_pos A;
+     mdist_sym := discr_sym A;
+     mdist_refl := discr_refl A;
+     mdist_tri := discr_tri A |}.
+
+Definition Metric' (A : Type') := {| type := Metric A ; el := discrete A |}.
+Canonical Metric'.
+
+Definition metric {A : Type'} := finv (@mdist A).
+
+Ltac ext_fun e :=
+  let H := fresh in
+  assert (H := ext_fun e) ; clear e ;
+  rename H into e.
+
+Print eq_rect.
+
+Definition mdist_proj {A : Type'} {d : prod A A -> R} {M : Metric A} (H : mdist A M = d) :=
+  {| mdist := d ;
+     mdist_pos := match H in (_ = d) return (forall x y : A, (d (x,y) >= 0)%R) with
+       eq_refl => mdist_pos A M end ;
+     mdist_sym := match H in (_ = d) return (forall x y : A, d (x,y) = d (y,x)) with
+       eq_refl => mdist_sym A M end ;
+     mdist_refl := match H in (_ = d) return (forall x y : A, d (x,y) = 0%R <-> x = y) with
+       eq_refl => mdist_refl A M end ;
+     mdist_tri := match H in (_ = d) return (forall x y z : A, (d (x,y) <= d (x,z) + d (z,y))%R) with
+       eq_refl => mdist_tri A M end |}.
+
+Lemma mdist_proj_surj {A : Type'} {d : prod A A -> R} {M : Metric A} (H : d = mdist A M) :
+  exists M', exists (H' : mdist A M' = d), mdist_proj (eq_trans H' H) = M.
+Proof.
+  exists (mdist_proj (eq_sym H)). simpl. exists (eq_refl d).
+  destruct M. unfold mdist_proj. simpl. f_equal;apply proof_irrelevance.
+Qed.
+
+Lemma _mk_dest_metric : forall {A : Type'} (a : Metric A), (@metric A (@mdist A a)) = a.
+Proof.
+  intro A. _mk_dest_rec. clear H. (* Can be improved in the tactic... *)
+  intros M M' H. destruct (mdist_proj_surj H) as (M'0, (H'0, H'1)).
+  destruct (mdist_proj_surj (eq_refl (mdist A M))) as (M0, (H0 , H1)).
+  rewrite <- H1 , <- H'1. simpl.
+Qed.
+Axiom axiom_44 : forall {A : Type'} (r : (prod A A) -> R), ((fun m : (prod A A) -> R => @ismet A m) r) = ((@mdist A (@metric A r)) = r).
+*)
+
+Definition ismet {A : Type'} : (prod A A -> R) -> Prop := fun d =>
+  (forall x y, d (x,y) = 0%R <-> x=y) /\
+  forall x y z : A, (d (y,z) <= d (x,y) + d (x,z))%R.
+
+Lemma ismet_def {A : Type'} : (@ismet A) = (fun _114640 : (prod A A) -> R => (forall x : A, forall y : A, ((_114640 (@pair A A x y)) = (R_of_N (NUMERAL N0))) = (x = y)) /\ (forall x : A, forall y : A, forall z : A, Rle (_114640 (@pair A A y z)) (Rplus (_114640 (@pair A A x y)) (_114640 (@pair A A x z))))).
+Proof.
+  ext d. unfold ismet. f_equal;auto.
+  apply prop_ext;intro H ; intros. now apply prop_ext_eq.
+  now rewrite H.
+Qed.
+
+Lemma is_metric0 {A : Type'} : ismet (discrete_metric A).
+Proof.
+  split. exact (discr_refl A). intros x y z. rewrite (discr_sym A x y).
+  now apply discr_tri.
+Qed.
+
+Definition Metric (A : Type') := subtype (A:= prod A A -> R) is_metric0.
+
+Definition metric {A : Type'} : (prod A A -> R) -> Metric A := mk is_metric0.
+Definition mdist {A : Type'} : Metric A -> prod A A -> R := dest is_metric0.
+
+Definition _mk_dest_Metric {A : Type'} : forall a : Metric A, (@metric A (@mdist A a)) = a :=
+  mk_dest is_metric0.
+
+Definition _dest_mk_Metric {A : Type'} : forall r : (prod A A) -> R, ((fun m : (prod A A) -> R => @ismet A m) r) = ((@mdist A (@metric A r)) = r) :=
+  dest_mk is_metric0.
+
+(*****************************************************************************)
+(* Multisets *)
+(*****************************************************************************)
+
+Lemma empty_mempty_domain {A : Type} : (fun _ : A => 0 <> 0) = Empty_set.
+Proof.
+  ext x. apply prop_ext ; intro H. destruct (H (eq_refl 0)). inversion H.
+Qed.
+
+Definition is_fmultiset {A : Type'} : (A -> N) -> Prop :=
+  fun f => @FINITE A (@GSPEC A (fun GEN_PVAR_433 : A => exists a : A, @SETSPEC A GEN_PVAR_433 (~ ((f a) = (NUMERAL N0))) a)).
+
+Lemma is_fmultiset0 (A : Type') : is_fmultiset (fun (_ : A) => 0).
+Proof.
+  unfold is_fmultiset. rewrite SPEC_elim , FINITE_eq_finite , empty_mempty_domain. left.
+Qed.
+
+Definition Multiset (A : Type') := subtype (is_fmultiset0 A).
+
+Definition multiset {A : Type'} := mk (is_fmultiset0 A).
+Definition multiplicity {A : Type'} := dest (is_fmultiset0 A).
+
+Lemma _mk_dest_Multiset : forall {A : Type'} (a : Multiset A), (@multiset A (@multiplicity A a)) = a.
+Proof. intros. apply mk_dest. Qed.
+
+Lemma _dest_mk_Multiset : forall {A : Type'} (r : A -> N), ((fun f : A -> N => @FINITE A (@GSPEC A (fun GEN_PVAR_433 : A => exists a : A, @SETSPEC A GEN_PVAR_433 (~ ((f a) = (NUMERAL N0))) a))) r) = ((@multiplicity A (@multiset A r)) = r).
+Proof. intros. apply dest_mk. Qed.
+
+Definition mempty {A : Type'} : Multiset A := multiset (fun _ => 0).
+Lemma mempty_def {_183533 : Type'} : mempty = (@multiset _183533 (fun b : _183533 => NUMERAL N0)).
+Proof. reflexivity. Qed.
+
+Definition mmember {A : Type'} (a : A) (m : Multiset A) := multiplicity m a <> 0.
+Lemma mmember_def {_183543 : Type'} : mmember = (fun _203992 : _183543 => fun _203993 : Multiset _183543 => ~ ((@multiplicity _183543 _203993 _203992) = (NUMERAL N0))).
+Proof. reflexivity. Qed.
+
+Definition msing {A : Type'} : A -> Multiset A := fun a => multiset (fun a' => COND (a'=a) 1 0).
+
+Lemma msing_def {_183559 : Type'} : msing = (fun _204004 : _183559 => @multiset _183559 (fun b : _183559 => @COND N (b = _204004) (NUMERAL (BIT1 N0)) (NUMERAL N0))).
+Proof. reflexivity. Qed.
+
+Definition munion {A : Type'} := fun (m m' : Multiset A) => 
+  multiset (fun a => multiplicity m a + (multiplicity m' a)).
+
+Lemma munion_def {_183578 : Type'} : (@munion _183578) = (fun _204009 : Multiset _183578 => fun _204010 : Multiset _183578 => @multiset _183578 (fun b : _183578 => N.add (@multiplicity _183578 _204009 b) (@multiplicity _183578 _204010 b))).
+Proof. reflexivity. Qed.
+
+Definition mdiff {A : Type'} := fun (m m' : Multiset A) => 
+  multiset (fun a => multiplicity m a - (multiplicity m' a)). 
+
+Lemma mdiff_def {_183597 : Type'} : (@mdiff _183597) = (fun _204021 : Multiset _183597 => fun _204022 : Multiset _183597 => @multiset _183597 (fun b : _183597 => N.sub (@multiplicity _183597 _204021 b) (@multiplicity _183597 _204022 b))).
+Proof. reflexivity. Qed.
+
 (* given an order relation R on A, define the order relation Rm on Multiset A by :
    Rm m m' <-> (exists a in m, forall a' in m', a' is in m\{a} or R a a'.) *)
 Definition morder {A : Type'} : (A -> A -> Prop) -> (Multiset A) -> (Multiset A) -> Prop := 
   fun R m m' => exists m0 a m1, (m' = munion m0 (msing a)) /\ 
   (m = munion m0 m1) /\ forall a', mmember a' m1 -> R a' a.
 Lemma morder_def {_184446 : Type'} : (@morder _184446) = (fun _204323 : _184446 -> _184446 -> Prop => fun _204324 : Multiset _184446 => fun _204325 : Multiset _184446 => exists M0 : Multiset _184446, exists a : _184446, exists K : Multiset _184446, (_204325 = (@munion _184446 M0 (@msing _184446 a))) /\ ((_204324 = (@munion _184446 M0 K)) /\ (forall b : _184446, (@mmember _184446 b K) -> _204323 b a))).
-Proof. reflexivity. Qed.
+Proof. reflexivity. Qed. 
 
 (*****************************************************************************)
 (* Aligning the type of first order terms *)
@@ -249,10 +595,23 @@ Fixpoint term_rect t : P t :=
         end) l)
   end.
 
+Fixpoint tl_rect l : Q l :=
+  match l as l return Q l with
+  | nil => H3
+  | t::l => H4 t l (term_rect t) (tl_rect l) end.
+
+
+
 End term_rect.
 
-Definition term_ind_full (P : term -> Prop) (Q : (list term) -> Prop) := 
+Definition term_ind_full (P : term -> Prop) (Q : list term -> Prop) := 
   term_rect P Q.
+
+Definition tl_ind (P : term -> Prop) (Q : list term -> Prop) :=
+  tl_rect P Q.
+
+Definition term_tl_ind P Q H1 H2 H3 H4 :=
+  conj (term_ind_full P Q H1 H2 H3 H4) (tl_ind P Q H1 H2 H3 H4).
 
 Definition term_ind : forall (P : term -> Prop),
        (forall n, P (V n)) ->
@@ -298,11 +657,10 @@ Fixpoint _dest_list_204637 l : recspace N :=
 Definition _mk_term :=finv _dest_term.
 Definition _mk_list_204637 := finv _dest_list_204637.
 
-Lemma _dest_term_inj : forall t t', _dest_term t = _dest_term t' -> t = t'.
+Lemma _dest_term_tl_inj : (forall t t', _dest_term t = _dest_term t' -> t = t')
+  /\ (forall l l', _dest_list_204637 l = _dest_list_204637 l' -> l = l').
 Proof.
-  apply (term_ind_full
-  (fun t => forall t', _dest_term t = _dest_term t' -> t = t')
-  (fun l => forall l', _dest_list_204637 l = _dest_list_204637 l' -> l = l')).
+  apply term_tl_ind.
   intros n t. induction t;simpl;inversion 1. reflexivity.
   - induction l ; intros H t' ; Forall_induction t' ; simpl ; inversion 1. 
     induction l. 3 : induction l0. reflexivity.
@@ -315,23 +673,86 @@ Qed.
 
 Lemma _mk_dest_term : forall t, (_mk_term (_dest_term t)) = t.
 Proof.
-  intro t. apply (_dest_term_inj).
-  apply (ε_spec (P := fun t' => _dest_term t' = _dest_term t)).
-  now exists t.
-Qed.
-
-Lemma _dest_list_204637_inj : forall l l', _dest_list_204637 l = _dest_list_204637 l' -> l = l'.
-Proof. 
-  induction l ; induction l'; simpl ; inversion 1. reflexivity.
-  repeat rewrite FCONS_inj in H1. f_equal. now apply _dest_term_inj.
-  now apply IHl.
+  _mk_dest_rec. exact (proj1 _dest_term_tl_inj).
 Qed.
 
 Lemma _mk_dest_list_204637 : forall l, (_mk_list_204637  (_dest_list_204637  l)) = l.
 Proof.
-  intro l. apply (_dest_list_204637_inj). 
-  apply (ε_spec (P := fun l' => _dest_list_204637 l' = _dest_list_204637 l)).
-  now exists l.
+  _mk_dest_rec. exact (proj2 _dest_term_tl_inj).
+Qed.
+
+Definition term_tl_pred term' list_204637':=
+    ((forall a0' : recspace N, 
+      ((exists a : N, a0' = ((fun a' : N => @CONSTR N (NUMERAL N0) a' (fun n : N => @BOTTOM N)) a)) \/ 
+        (exists a0 : N, exists a1 : recspace N, (a0' = ((fun a0'' : N => fun a1' : recspace N => 
+          @CONSTR N (N.succ (NUMERAL N0)) a0'' (@FCONS (recspace N) a1' (fun n : N => @BOTTOM N))) a0 a1)) /\ 
+            (list_204637' a1))) -> term' a0') /\ 
+              (forall a1' : recspace N, ((a1' = (@CONSTR N (N.succ (N.succ (NUMERAL N0))) 
+              (@ε N (fun v : N => True)) (fun n : N => @BOTTOM N))) \/ 
+                (exists a0 : recspace N, exists a1 : recspace N, 
+                (a1' = ((fun a0'' : recspace N => fun a1'' : recspace N => 
+                @CONSTR N (N.succ (N.succ (N.succ (NUMERAL N0)))) (@ε N (fun v : N => True)) 
+                (@FCONS (recspace N) a0'' (@FCONS (recspace N) a1'' (fun n : N => @BOTTOM N)))) a0 a1)) /\ 
+                  ((term' a0) /\ (list_204637' a1)))) -> list_204637' a1')).
+
+Lemma _dest_mk_term_tl0 : forall P P' : recspace N -> Prop, term_tl_pred P P' ->
+  (forall t, P (_dest_term t)) /\ forall l, P' (_dest_list_204637 l).
+Proof.
+  intros P P' H. apply term_tl_ind.
+  - intro n. apply H. left. now exists n.
+  - intros n l IHl. apply H. right. exists n. now exists (_dest_list_204637 l).
+  - apply H. now left.
+  - intros t l IHt IHl. apply H. right. exists (_dest_term t). now exists (_dest_list_204637 l).
+Qed.
+
+Lemma _dest_mk_list_204637 : forall r, (fun r' => forall P P', term_tl_pred P P' -> P' r') r =
+  (_dest_list_204637 (_mk_list_204637 r) = r).
+Proof.
+  intro r.
+  let H := fresh in
+  let x := fresh "x" in
+  apply finv_inv ; intro H ;
+  [ apply (H (fun y => exists x, _dest_term x = y)) ; (* P y states that to prove any P' y, one only has to prove
+                 P' x' for all x' built from the constructors (top down construction).
+                 so we apply it to our goal and then use firstorder to break the hypothesis
+                 into clauses of equality with each constructor, rewrite it,
+                 then remove the hypothesis and we are only left with choosing
+                 the correct construtor to replace x with. *)
+    clear H ; split ; intros x H ;
+    firstorder ; rewrite H ;
+    clear H ; simpl in *
+  | (* simply inducting over x such that _dest_ x = y. *)
+    destruct H as (x,H) ; rewrite <- H ; clear H ;
+    intros P P' H ; exact (proj2 (_dest_mk_term_tl0 P P' H) x) ].
+  - now exists (V x0).
+  - rewrite <- H0. now exists (Fn x0 x2).
+  - now exists nil.
+  - rewrite <- H0, <- H1. now exists (x3::x2).
+Qed.
+
+Lemma _dest_mk_term : forall r, (fun r' => forall P P', term_tl_pred P P' -> P r') r =
+  (_dest_term (_mk_term r) = r).
+Proof.
+  intro r.
+  let H := fresh in
+  let x := fresh "x" in
+  apply finv_inv ; intro H ;
+  [ apply (H (fun y => exists x, _dest_term x = y) (fun y => exists x, _dest_list_204637 x = y)) ; (* P y states that to prove any P' y, one only has to prove
+                 P' x' for all x' built from the constructors (top down construction).
+                 so we apply it to our goal and then use firstorder to break the hypothesis
+                 into clauses of equality with each constructor, rewrite it,
+                 then remove the hypothesis and we are only left with choosing
+                 the correct construtor to replace x with. *)
+    clear H ; split ; intros x H ;
+    firstorder ; rewrite H ;
+    clear H ; simpl in *
+  | (* simply inducting over x such that _dest_ x = y. *)
+    destruct H as (x,H) ; rewrite <- H ; clear H ;
+    intros P P' H ; exact (proj1 (_dest_mk_term_tl0 P P' H) x) ].
+  - now exists (V x0).
+  - rewrite <- H0. now exists (Fn x0 x2).
+  - now exists nil.
+  - rewrite <- H0, <- H1. now exists (x3::x2).
 Qed.
 
 Lemma V_def : V = (fun a : N => _mk_term ((fun a' : N => @CONSTR N (NUMERAL N0) a' (fun n : N => @BOTTOM N)) a)).
@@ -351,7 +772,7 @@ Proof. ext t l. symmetry. exact (_mk_dest_list_204637 (cons t l)). Qed.
 (*****************************************************************************)
 
 (* identical to total_align, but specifically for functions
-   defined where the recursive call is done through List.map *)
+   where the recursive call is done through List.map on terms *)
 
 Ltac term_align1 :=
   align_ε' ; [ firstorder
@@ -472,8 +893,22 @@ match f with
 
 Definition _mk_form := finv _dest_form.
 
-Lemma _mk_dest_form : forall f, (_mk_form (_dest_form f)) = f.
+Lemma _mk_dest_form : forall (a : form), (_mk_form (_dest_form a)) = a.
 Proof. _mk_dest_rec. Qed.
+
+Lemma _dest_mk_form : forall (r : recspace (prod N (list term))), ((fun a : recspace (prod N (list term)) => forall form' : (recspace (prod N (list term))) -> Prop, (forall a' : recspace (prod N (list term)), ((a' = (@CONSTR (prod N (list term)) (NUMERAL N0) (@pair N (list term) (@ε N (fun v : N => True)) (@ε (list term) (fun v : list term => True))) (fun n : N => @BOTTOM (prod N (list term))))) \/ ((exists a0 : N, exists a1 : list term, a' = ((fun a0' : N => fun a1' : list term => @CONSTR (prod N (list term)) (N.succ (NUMERAL N0)) (@pair N (list term) a0' a1') (fun n : N => @BOTTOM (prod N (list term)))) a0 a1)) \/ ((exists a0 : recspace (prod N (list term)), exists a1 : recspace (prod N (list term)), (a' = ((fun a0' : recspace (prod N (list term)) => fun a1' : recspace (prod N (list term)) => @CONSTR (prod N (list term)) (N.succ (N.succ (NUMERAL N0))) (@pair N (list term) (@ε N (fun v : N => True)) (@ε (list term) (fun v : list term => True))) (@FCONS (recspace (prod N (list term))) a0' (@FCONS (recspace (prod N (list term))) a1' (fun n : N => @BOTTOM (prod N (list term)))))) a0 a1)) /\ ((form' a0) /\ (form' a1))) \/ (exists a0 : N, exists a1 : recspace (prod N (list term)), (a' = ((fun a0' : N => fun a1' : recspace (prod N (list term)) => @CONSTR (prod N (list term)) (N.succ (N.succ (N.succ (NUMERAL N0)))) (@pair N (list term) a0' (@ε (list term) (fun v : list term => True))) (@FCONS (recspace (prod N (list term))) a1' (fun n : N => @BOTTOM (prod N (list term))))) a0 a1)) /\ (form' a1))))) -> form' a') -> form' a) r) = ((_dest_form (_mk_form r)) = r).
+Proof.
+  intro r. _dest_mk_rec.
+  - now exists FFalse.
+  - now exists (Atom x0 x1).
+  - exists (FImp x3 x2). unfold _dest_form. now repeat f_equal.
+  - exists (FAll x0 x2). unfold _dest_form. now repeat f_equal.
+  - left. reflexivity.
+  - right. left. exists n. now exists l.
+  - do 2 right. left. exists (_dest_form x0_1). exists (_dest_form x0_2).
+    repeat split;auto. now apply IHx0_1. now apply IHx0_2.
+  - do 3 right. exists n. exists (_dest_form x0). split. reflexivity. now apply IHx0.
+Qed.
 
 Lemma FFalse_def : FFalse = (_mk_form (@CONSTR (prod N (list term)) (NUMERAL N0) (@pair N (list term) (@ε N (fun v : N => True)) (@ε (list term) (fun v : list term => True))) (fun n : N => @BOTTOM (prod N (list term))))).
 Proof. symmetry. exact (_mk_dest_form FFalse). Qed.
@@ -740,9 +1175,9 @@ Fixpoint formsubst (v : N -> term) f :=
        n in
       FAll n' (formsubst (valmod (n, V n') v) f) end.
 
-Lemma formsubst_def : formsubst = (@ε ((prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N)))))))) -> (N -> term) -> form -> form) (fun formsubst' : (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N)))))))) -> (N -> term) -> form -> form => forall _206432 : prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))), (forall v : N -> term, (formsubst' _206432 v FFalse) = FFalse) /\ ((forall p : N, forall v : N -> term, forall l : list term, (formsubst' _206432 v (Atom p l)) = (Atom p (@List.map term term (termsubst v) l))) /\ ((forall q : form, forall v : N -> term, forall r : form, (formsubst' _206432 v (FImp q r)) = (FImp (formsubst' _206432 v q) (formsubst' _206432 v r))) /\ (forall q : form, forall x : N, forall v : N -> term, (formsubst' _206432 v (FAll x q)) = (@Basics.apply (N -> term) form (fun v' : N -> term => @id form (@Basics.apply N form (fun z : N => @id form (FAll z (formsubst' _206432 (@valmod term N (@pair N term x (V z)) v) q))) (@COND N (exists y : N, (@IN N y (free_variables (FAll x q))) /\ (@IN N x (free_variables_term (v' y)))) (VARIANT (free_variables (formsubst' _206432 v' q))) x))) (@valmod term N (@pair N term x (V x)) v)))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))) (NUMERAL (BIT0 (BIT1 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N N)))))) (NUMERAL (BIT1 (BIT1 (BIT1 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N N))))) (NUMERAL (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N N)))) (NUMERAL (BIT1 (BIT0 (BIT1 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N N))) (NUMERAL (BIT1 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N N)) (NUMERAL (BIT1 (BIT0 (BIT1 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N N) (NUMERAL (BIT0 (BIT1 (BIT0 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N N (NUMERAL (BIT1 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))) (NUMERAL (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 (BIT1 (BIT1 N0))))))))))))))))).
+Lemma formsubst_def : formsubst = (@ε ((prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N)))))))) -> (N -> term) -> form -> form) (fun formsubst' : (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N)))))))) -> (N -> term) -> form -> form => forall _206432 : prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))), (forall v : N -> term, (formsubst' _206432 v FFalse) = FFalse) /\ ((forall p : N, forall v : N -> term, forall l : list term, (formsubst' _206432 v (Atom p l)) = (Atom p (@List.map term term (termsubst v) l))) /\ ((forall q : form, forall v : N -> term, forall r : form, (formsubst' _206432 v (FImp q r)) = (FImp (formsubst' _206432 v q) (formsubst' _206432 v r))) /\ (forall q : form, forall x : N, forall v : N -> term, (formsubst' _206432 v (FAll x q)) = (@Basics.apply (N -> term) form (fun v' : N -> term => @Datatypes.id form (@Basics.apply N form (fun z : N => @Datatypes.id form (FAll z (formsubst' _206432 (@valmod term N (@pair N term x (V z)) v) q))) (@COND N (exists y : N, (@IN N y (free_variables (FAll x q))) /\ (@IN N x (free_variables_term (v' y)))) (VARIANT (free_variables (formsubst' _206432 v' q))) x))) (@valmod term N (@pair N term x (V x)) v)))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))) (NUMERAL (BIT0 (BIT1 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N N)))))) (NUMERAL (BIT1 (BIT1 (BIT1 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N N))))) (NUMERAL (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N N)))) (NUMERAL (BIT1 (BIT0 (BIT1 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N N))) (NUMERAL (BIT1 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N N)) (NUMERAL (BIT1 (BIT0 (BIT1 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N N) (NUMERAL (BIT0 (BIT1 (BIT0 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N N (NUMERAL (BIT1 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))) (NUMERAL (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 (BIT1 (BIT1 N0))))))))))))))))).
 Proof.
-  total_align2. unfold Basics.apply, id. now repeat rewrite IHform.
+  total_align2. unfold Basics.apply, Datatypes.id. now repeat rewrite IHform.
 Qed.
 
 (****************************************************************************)
@@ -810,23 +1245,14 @@ Inductive prenex : form -> Prop :=
 | prenex_FEx : forall f n, prenex f -> prenex (FEx n f).
 
 Lemma prenex_def : prenex = (fun a : form => forall prenex' : form -> Prop, (forall a' : form, ((qfree a') \/ ((exists x : N, exists p : form, (a' = (FAll x p)) /\ (prenex' p)) \/ (exists x : N, exists p : form, (a' = (FEx x p)) /\ (prenex' p)))) -> prenex' a') -> prenex' a).
-Proof.
-  ind_align.
-  - exact (prenex_qfree x H).
-  - exact (prenex_FAll p x0 H0).
-  - exact (prenex_FEx p x0 H0).
-Qed.
+Proof. ind_align'. Qed.
 
 Inductive universal : form -> Prop :=
 | universal_qfree : forall f, qfree f -> universal f
 | universal_forall : forall f n, universal f -> universal (FAll n f).
 
 Lemma universal_def : universal = (fun a : form => forall universal' : form -> Prop, (forall a' : form, ((qfree a') \/ (exists x : N, exists p : form, (a' = (FAll x p)) /\ (universal' p))) -> universal' a') -> universal' a).
-Proof.
-  ind_align.
-  - exact (universal_qfree x H).
-  - exact (universal_forall p x0 H0).
-Qed.
+Proof. ind_align'. Qed.
 
 Fixpoint sizeN f :=
   match f with
@@ -938,14 +1364,14 @@ Proof.
     inversion_clear H. destruct (proj1 H0). assumption.
 Qed.
 
-Definition Prenex_right : form -> form -> form := @ε ((prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))))))) -> form -> form -> form) (fun Prenex_right' : (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))))))) -> form -> form -> form => forall _216639 : prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N)))))))))), (forall p : form, forall x : N, forall q : form, (Prenex_right' _216639 p (FAll x q)) = (@Basics.apply N form (fun y : N => @id form (FAll y (Prenex_right' _216639 p (formsubst (@valmod term N (@pair N term x (V y)) V) q)))) (VARIANT (@Ensembles.Union N (free_variables p) (free_variables (FAll x q)))))) /\ ((forall p : form, forall x : N, forall q : form, (Prenex_right' _216639 p (FEx x q)) = (@Basics.apply N form (fun y : N => @id form (FEx y (Prenex_right' _216639 p (formsubst (@valmod term N (@pair N term x (V y)) V) q)))) (VARIANT (@Ensembles.Union N (free_variables p) (free_variables (FEx x q)))))) /\ (forall p : form, forall q : form, (qfree q) -> (Prenex_right' _216639 p q) = (FImp p q)))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N)))))))))) (NUMERAL (BIT0 (BIT0 (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))))) (NUMERAL (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N)))))))) (NUMERAL (BIT1 (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))) (NUMERAL (BIT0 (BIT1 (BIT1 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N N)))))) (NUMERAL (BIT1 (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N N))))) (NUMERAL (BIT0 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N N)))) (NUMERAL (BIT1 (BIT1 (BIT1 (BIT1 (BIT1 (BIT0 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N N))) (NUMERAL (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N N)) (NUMERAL (BIT1 (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N N) (NUMERAL (BIT1 (BIT1 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N N (NUMERAL (BIT0 (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (NUMERAL (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 (BIT1 (BIT1 N0))))))))))))))))))).
+Definition Prenex_right : form -> form -> form := @ε ((prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))))))) -> form -> form -> form) (fun Prenex_right' : (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))))))) -> form -> form -> form => forall _216639 : prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N)))))))))), (forall p : form, forall x : N, forall q : form, (Prenex_right' _216639 p (FAll x q)) = (@Basics.apply N form (fun y : N => @Datatypes.id form (FAll y (Prenex_right' _216639 p (formsubst (@valmod term N (@pair N term x (V y)) V) q)))) (VARIANT (@Ensembles.Union N (free_variables p) (free_variables (FAll x q)))))) /\ ((forall p : form, forall x : N, forall q : form, (Prenex_right' _216639 p (FEx x q)) = (@Basics.apply N form (fun y : N => @Datatypes.id form (FEx y (Prenex_right' _216639 p (formsubst (@valmod term N (@pair N term x (V y)) V) q)))) (VARIANT (@Ensembles.Union N (free_variables p) (free_variables (FEx x q)))))) /\ (forall p : form, forall q : form, (qfree q) -> (Prenex_right' _216639 p q) = (FImp p q)))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N)))))))))) (NUMERAL (BIT0 (BIT0 (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))))) (NUMERAL (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N)))))))) (NUMERAL (BIT1 (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))) (NUMERAL (BIT0 (BIT1 (BIT1 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N N)))))) (NUMERAL (BIT1 (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N N))))) (NUMERAL (BIT0 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N N)))) (NUMERAL (BIT1 (BIT1 (BIT1 (BIT1 (BIT1 (BIT0 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N N))) (NUMERAL (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N N)) (NUMERAL (BIT1 (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N N) (NUMERAL (BIT1 (BIT1 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N N (NUMERAL (BIT0 (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (NUMERAL (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 (BIT1 (BIT1 N0))))))))))))))))))).
 
-Lemma Prenex_right_def : Prenex_right = (@ε ((prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))))))) -> form -> form -> form) (fun Prenex_right' : (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))))))) -> form -> form -> form => forall _216639 : prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N)))))))))), (forall p : form, forall x : N, forall q : form, (Prenex_right' _216639 p (FAll x q)) = (@Basics.apply N form (fun y : N => @id form (FAll y (Prenex_right' _216639 p (formsubst (@valmod term N (@pair N term x (V y)) V) q)))) (VARIANT (@Ensembles.Union N (free_variables p) (free_variables (FAll x q)))))) /\ ((forall p : form, forall x : N, forall q : form, (Prenex_right' _216639 p (FEx x q)) = (@Basics.apply N form (fun y : N => @id form (FEx y (Prenex_right' _216639 p (formsubst (@valmod term N (@pair N term x (V y)) V) q)))) (VARIANT (@Ensembles.Union N (free_variables p) (free_variables (FEx x q)))))) /\ (forall p : form, forall q : form, (qfree q) -> (Prenex_right' _216639 p q) = (FImp p q)))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N)))))))))) (NUMERAL (BIT0 (BIT0 (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))))) (NUMERAL (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N)))))))) (NUMERAL (BIT1 (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))) (NUMERAL (BIT0 (BIT1 (BIT1 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N N)))))) (NUMERAL (BIT1 (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N N))))) (NUMERAL (BIT0 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N N)))) (NUMERAL (BIT1 (BIT1 (BIT1 (BIT1 (BIT1 (BIT0 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N N))) (NUMERAL (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N N)) (NUMERAL (BIT1 (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N N) (NUMERAL (BIT1 (BIT1 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N N (NUMERAL (BIT0 (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (NUMERAL (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))))))))))))))).
+Lemma Prenex_right_def : Prenex_right = (@ε ((prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))))))) -> form -> form -> form) (fun Prenex_right' : (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))))))) -> form -> form -> form => forall _216639 : prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N)))))))))), (forall p : form, forall x : N, forall q : form, (Prenex_right' _216639 p (FAll x q)) = (@Basics.apply N form (fun y : N => @Datatypes.id form (FAll y (Prenex_right' _216639 p (formsubst (@valmod term N (@pair N term x (V y)) V) q)))) (VARIANT (@Ensembles.Union N (free_variables p) (free_variables (FAll x q)))))) /\ ((forall p : form, forall x : N, forall q : form, (Prenex_right' _216639 p (FEx x q)) = (@Basics.apply N form (fun y : N => @Datatypes.id form (FEx y (Prenex_right' _216639 p (formsubst (@valmod term N (@pair N term x (V y)) V) q)))) (VARIANT (@Ensembles.Union N (free_variables p) (free_variables (FEx x q)))))) /\ (forall p : form, forall q : form, (qfree q) -> (Prenex_right' _216639 p q) = (FImp p q)))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N)))))))))) (NUMERAL (BIT0 (BIT0 (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))))) (NUMERAL (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N)))))))) (NUMERAL (BIT1 (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))) (NUMERAL (BIT0 (BIT1 (BIT1 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N N)))))) (NUMERAL (BIT1 (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N N))))) (NUMERAL (BIT0 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N N)))) (NUMERAL (BIT1 (BIT1 (BIT1 (BIT1 (BIT1 (BIT0 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N N))) (NUMERAL (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N N)) (NUMERAL (BIT1 (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N N) (NUMERAL (BIT1 (BIT1 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N N (NUMERAL (BIT0 (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (NUMERAL (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))))))))))))))).
 Proof. exact (eq_refl Prenex_right). Qed.
 
-Definition Prenex_left : form -> form -> form := @ε ((prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N)))))))))) -> form -> form -> form) (fun Prenex_left' : (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N)))))))))) -> form -> form -> form => forall _216680 : prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))))), (forall p : form, forall x : N, forall q : form, (Prenex_left' _216680 (FAll x q) p) = (@Basics.apply N form (fun y : N => @id form (FEx y (Prenex_left' _216680 (formsubst (@valmod term N (@pair N term x (V y)) V) q) p))) (VARIANT (@Ensembles.Union N (free_variables (FAll x q)) (free_variables p))))) /\ ((forall p : form, forall x : N, forall q : form, (Prenex_left' _216680 (FEx x q) p) = (@Basics.apply N form (fun y : N => @id form (FAll y (Prenex_left' _216680 (formsubst (@valmod term N (@pair N term x (V y)) V) q) p))) (VARIANT (@Ensembles.Union N (free_variables (FEx x q)) (free_variables p))))) /\ (forall p : form, forall q : form, (qfree q) -> (Prenex_left' _216680 q p) = (Prenex_right q p)))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))))) (NUMERAL (BIT0 (BIT0 (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N)))))))) (NUMERAL (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))) (NUMERAL (BIT1 (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N N)))))) (NUMERAL (BIT0 (BIT1 (BIT1 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N N))))) (NUMERAL (BIT1 (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N N)))) (NUMERAL (BIT0 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N N))) (NUMERAL (BIT1 (BIT1 (BIT1 (BIT1 (BIT1 (BIT0 (BIT1 N0)))))))) (@pair N (prod N (prod N N)) (NUMERAL (BIT0 (BIT0 (BIT1 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N N) (NUMERAL (BIT1 (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N N (NUMERAL (BIT0 (BIT1 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (NUMERAL (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))))))))))))).
+Definition Prenex_left : form -> form -> form := @ε ((prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N)))))))))) -> form -> form -> form) (fun Prenex_left' : (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N)))))))))) -> form -> form -> form => forall _216680 : prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))))), (forall p : form, forall x : N, forall q : form, (Prenex_left' _216680 (FAll x q) p) = (@Basics.apply N form (fun y : N => @Datatypes.id form (FEx y (Prenex_left' _216680 (formsubst (@valmod term N (@pair N term x (V y)) V) q) p))) (VARIANT (@Ensembles.Union N (free_variables (FAll x q)) (free_variables p))))) /\ ((forall p : form, forall x : N, forall q : form, (Prenex_left' _216680 (FEx x q) p) = (@Basics.apply N form (fun y : N => @Datatypes.id form (FAll y (Prenex_left' _216680 (formsubst (@valmod term N (@pair N term x (V y)) V) q) p))) (VARIANT (@Ensembles.Union N (free_variables (FEx x q)) (free_variables p))))) /\ (forall p : form, forall q : form, (qfree q) -> (Prenex_left' _216680 q p) = (Prenex_right q p)))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))))) (NUMERAL (BIT0 (BIT0 (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N)))))))) (NUMERAL (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))) (NUMERAL (BIT1 (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N N)))))) (NUMERAL (BIT0 (BIT1 (BIT1 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N N))))) (NUMERAL (BIT1 (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N N)))) (NUMERAL (BIT0 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N N))) (NUMERAL (BIT1 (BIT1 (BIT1 (BIT1 (BIT1 (BIT0 (BIT1 N0)))))))) (@pair N (prod N (prod N N)) (NUMERAL (BIT0 (BIT0 (BIT1 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N N) (NUMERAL (BIT1 (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N N (NUMERAL (BIT0 (BIT1 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (NUMERAL (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))))))))))))).
 
-Lemma Prenex_left_def : Prenex_left = (@ε ((prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N)))))))))) -> form -> form -> form) (fun Prenex_left' : (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N)))))))))) -> form -> form -> form => forall _216680 : prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))))), (forall p : form, forall x : N, forall q : form, (Prenex_left' _216680 (FAll x q) p) = (@Basics.apply N form (fun y : N => @id form (FEx y (Prenex_left' _216680 (formsubst (@valmod term N (@pair N term x (V y)) V) q) p))) (VARIANT (@Ensembles.Union N (free_variables (FAll x q)) (free_variables p))))) /\ ((forall p : form, forall x : N, forall q : form, (Prenex_left' _216680 (FEx x q) p) = (@Basics.apply N form (fun y : N => @id form (FAll y (Prenex_left' _216680 (formsubst (@valmod term N (@pair N term x (V y)) V) q) p))) (VARIANT (@Ensembles.Union N (free_variables (FEx x q)) (free_variables p))))) /\ (forall p : form, forall q : form, (qfree q) -> (Prenex_left' _216680 q p) = (Prenex_right q p)))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))))) (NUMERAL (BIT0 (BIT0 (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N)))))))) (NUMERAL (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))) (NUMERAL (BIT1 (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N N)))))) (NUMERAL (BIT0 (BIT1 (BIT1 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N N))))) (NUMERAL (BIT1 (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N N)))) (NUMERAL (BIT0 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N N))) (NUMERAL (BIT1 (BIT1 (BIT1 (BIT1 (BIT1 (BIT0 (BIT1 N0)))))))) (@pair N (prod N (prod N N)) (NUMERAL (BIT0 (BIT0 (BIT1 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N N) (NUMERAL (BIT1 (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N N (NUMERAL (BIT0 (BIT1 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (NUMERAL (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 (BIT1 (BIT1 N0))))))))))))))))))).
+Lemma Prenex_left_def : Prenex_left = (@ε ((prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N)))))))))) -> form -> form -> form) (fun Prenex_left' : (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N)))))))))) -> form -> form -> form => forall _216680 : prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))))), (forall p : form, forall x : N, forall q : form, (Prenex_left' _216680 (FAll x q) p) = (@Basics.apply N form (fun y : N => @Datatypes.id form (FEx y (Prenex_left' _216680 (formsubst (@valmod term N (@pair N term x (V y)) V) q) p))) (VARIANT (@Ensembles.Union N (free_variables (FAll x q)) (free_variables p))))) /\ ((forall p : form, forall x : N, forall q : form, (Prenex_left' _216680 (FEx x q) p) = (@Basics.apply N form (fun y : N => @Datatypes.id form (FAll y (Prenex_left' _216680 (formsubst (@valmod term N (@pair N term x (V y)) V) q) p))) (VARIANT (@Ensembles.Union N (free_variables (FEx x q)) (free_variables p))))) /\ (forall p : form, forall q : form, (qfree q) -> (Prenex_left' _216680 q p) = (Prenex_right q p)))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))))) (NUMERAL (BIT0 (BIT0 (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N)))))))) (NUMERAL (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))) (NUMERAL (BIT1 (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N N)))))) (NUMERAL (BIT0 (BIT1 (BIT1 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N N))))) (NUMERAL (BIT1 (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N N)))) (NUMERAL (BIT0 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N N))) (NUMERAL (BIT1 (BIT1 (BIT1 (BIT1 (BIT1 (BIT0 (BIT1 N0)))))))) (@pair N (prod N (prod N N)) (NUMERAL (BIT0 (BIT0 (BIT1 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N N) (NUMERAL (BIT1 (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N N (NUMERAL (BIT0 (BIT1 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (NUMERAL (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 (BIT1 (BIT1 N0))))))))))))))))))).
 Proof. exact (eq_refl Prenex_left). Qed.
 
 Lemma partial_align_ε2'var {U A B C : Type'} {uv0 : U} {f : A -> B -> C}
@@ -1454,6 +1880,15 @@ Proof.
   _mk_dest_rec.
 Qed.
 
+Lemma _dest_mk_retval : forall (r : recspace Prop), ((fun a : recspace Prop => forall retval' : (recspace Prop) -> Prop, (forall a' : recspace Prop, ((a' = (@CONSTR Prop (NUMERAL N0) (@ε Prop (fun x : Prop => True)) (fun n : N => @BOTTOM Prop))) \/ ((a' = (@CONSTR Prop (N.succ (NUMERAL N0)) (@ε Prop (fun x : Prop => True)) (fun n : N => @BOTTOM Prop))) \/ (a' = (@CONSTR Prop (N.succ (N.succ (NUMERAL N0))) (@ε Prop (fun x : Prop => True)) (fun n : N => @BOTTOM Prop))))) -> retval' a') -> retval' a) r) = ((_dest_retval (_mk_retval r)) = r).
+Proof.
+  intro r. _dest_mk_rec.
+  4-6 : auto.
+  - now exists TT.
+  - now exists FF.
+  - now exists Exception.
+Qed.
+
 Lemma TT_def : TT = (_mk_retval (@CONSTR Prop (NUMERAL N0) (@ε Prop (fun x : Prop => True)) (fun n : N => @BOTTOM Prop))).
 Proof. symmetry. exact (_mk_dest_retval TT). Qed.
 
@@ -1485,13 +1920,10 @@ Proof. exact (eq_refl LOOPFREE). Qed.
 
 (* come back with a better tactic for partial functions *)
 
-Definition rightsubst (c c' : prod N term) :=
-  match c' with (n,t) => (n,termsubst (valmod c V) t) end.
+Definition rightsubst (c c' : prod N term) := (fst c',termsubst (valmod c V) (snd c')).
 
 Lemma rightsubst_def : rightsubst = (fun _260241 : prod N term => fun _260242 : prod N term => @pair N term (@fst N term _260242) (termsubst (fun z : N => @COND term (z = (@fst N term _260241)) (@snd N term _260241) (V z)) (@snd N term _260242))).
-Proof.
-  ext c (n,t). reflexivity.
-Qed.
+Proof. exact (eq_refl rightsubst). Qed.
 
 Fixpoint list_rightsubst l c' :=
   match l with
@@ -1512,7 +1944,7 @@ Fixpoint self_rightsubst l :=
 Definition SOLVE l l' := let l'' := rev l' in
   (self_rightsubst l'') ++ (map (list_rightsubst (lsubst l'')) l).
 
-Definition SOLVEC c := match c with (l,l') => SOLVE l l' end.
+Definition SOLVEC c := SOLVE (fst c) (snd c).
 
 Lemma appcons_appapp {A : Type} (a:A) l l' : (l++a::nil)++l' = l++a::l'.
 Proof.
@@ -1553,7 +1985,7 @@ Lemma SOLVEC_def : SOLVEC = (@ε ((prod N (prod N (prod N (prod N (prod N N)))))
 Proof.
   align_ε'.
   - intros (l,l'). simpl. rewrite COND_list. destruct l'. apply map_id.
-    simpl. unfold SOLVE. rewrite <- map_rev.
+    unfold SOLVEC. simpl. unfold SOLVE. rewrite <- map_rev.
     simpl. rewrite self_rightsubst_tail. simpl.
     rewrite (appcons_appapp (list_rightsubst (lsubst (map (rightsubst p) (rev l'))) p)).
     do 2 f_equal. induction l;auto. simpl.
@@ -1563,14 +1995,14 @@ Proof.
                                                                             this is ridiculous. *)
     unfold SOLVEC , SOLVE. now rewrite map_id.
     simpl. rewrite <- IHl0.
-    unfold SOLVEC in H. now rewrite (H (l,c'::l'0)) , COND_list.
+    unfold SOLVEC in *. now rewrite (H (l,c'::l'0)) , COND_list.
 Qed.
 
 Lemma SOLVE_def : SOLVE = (fun _260268 : list (prod N term) => fun _260269 : list (prod N term) => SOLVEC (@pair (list (prod N term)) (list (prod N term)) _260268 _260269)).
 Proof. exact (eq_refl SOLVE). Qed.
 
 Definition CONFLICTFREE (l : list (N*term)) :=
-  forall n, lengthN (FILTER (fun c => match c with (n' , _) => n' = n end) l) <= 1.
+  forall n, lengthN (FILTER (fun c => fst c = n) l) <= 1.
 
 Lemma CONFLICTFREE_def : CONFLICTFREE = (fun _260280 : list (prod N term) => forall x : N, N.le (@lengthN (prod N term) (@FILTER (prod N term) (@ε ((prod N term) -> Prop) (fun f : (prod N term) -> Prop => forall y : N, forall s : term, @eq Prop (f (@pair N term y s)) (y = x))) _260280)) (NUMERAL (BIT1 N0))).
 Proof.
@@ -1604,12 +2036,11 @@ Lemma termcases_def {_209078 : Type'} : (@termcases _209078) = (@ε ((prod N (pr
 Proof. term_align. Qed.
 
 Definition tpcases {A : Type} caseFn_Fn caseV caseFn_V c : A :=
-  match c with (t,t') =>
-    match t with
-    | V n => caseV n t'
-    | Fn n l => match t' with
+    match fst c with
+    | V n => caseV n (snd c)
+    | Fn n l => match snd c with
       | V n' => caseFn_V n l n'
-      | Fn n' l' => caseFn_Fn n l n' l' end end end.
+      | Fn n' l' => caseFn_Fn n l n' l' end end.
 
 Lemma tpcases_def {_209138 : Type'} : (@tpcases _209138) = (fun _267401 : N -> (list term) -> N -> (list term) -> _209138 => fun _267402 : N -> term -> _209138 => fun _267403 : N -> (list term) -> N -> _209138 => fun _267404 : prod term term => @termcases _209138 (fun v1 : N => @termcases _209138 (fun v2 : N => _267402 v1 (V v2)) (fun f2 : N => fun args2 : list term => _267402 v1 (Fn f2 args2)) (@snd term term _267404)) (fun f1 : N => fun args1 : list term => @termcases _209138 (fun v2 : N => _267403 f1 args1 v2) (fun f2 : N => fun args2 : list term => _267401 f1 args1 f2 args2) (@snd term term _267404)) (@fst term term _267404)).
 Proof. ext f f' f''. ext (t,t'). now induction t'. Qed.
@@ -1647,244 +2078,18 @@ Definition CALLORDER c' c :=
 Lemma CALLORDER_def : CALLORDER = (fun _267471 : prod (list (prod N term)) (list (prod term term)) => fun _267472 : prod (list (prod N term)) (list (prod term term)) => (@MEASURE (prod (list (prod N term)) (list (prod term term))) MLEFT (@pair (list (prod N term)) (list (prod term term)) (@fst (list (prod N term)) (list (prod term term)) _267471) (@snd (list (prod N term)) (list (prod term term)) _267471)) (@pair (list (prod N term)) (list (prod term term)) (@fst (list (prod N term)) (list (prod term term)) _267472) (@snd (list (prod N term)) (list (prod term term)) _267472))) \/ (CRIGHT (@pair (list (prod N term)) (list (prod term term)) (@fst (list (prod N term)) (list (prod term term)) _267471) (@snd (list (prod N term)) (list (prod term term)) _267471)) (@pair (list (prod N term)) (list (prod term term)) (@fst (list (prod N term)) (list (prod term term)) _267472) (@snd (list (prod N term)) (list (prod term term)) _267472)))).
 Proof. ext (env',eqs') (env,eqs). reflexivity. Qed.
 
-(* Function unify0 env eqs {measure length eqs} :=
-  match eqs with
-  | nil => Some env
-  | (t,t')::eqs => match t with
-    | V n => COND (In n (map fst env))
-      (unify0 env ((assoc n env, t') :: eqs))
-      (match istriv env n t' with
-      | None => None
-      | Some true => unify0 env eqs
-      | Some false => unify0 ((n,t') :: env) eqs end)
-    | Fn n l => match t' with
-      | V n' => unify0 env ((V n', Fn n l) :: eqs)
-      | Fn n' l' => COND (n = n' /\ lengthN l = lengthN l')
-              (unify0 env  (zip l l' ++ eqs)) None end end end.*)
-(* Seems to be a very difficult recursion : measured on basically a combination of 
-   overall structure of eqs (the sum of the number of symbols appearing in each
-   term) and some form of disance inside env definable since it is loopfree. *)
-
-Definition unify : (prod (list (prod N term)) (list (prod term term))) -> option (list (prod N term)) := @ε ((prod N (prod N (prod N (prod N N)))) -> (prod (list (prod N term)) (list (prod term term))) -> option (list (prod N term))) (fun unify' : (prod N (prod N (prod N (prod N N)))) -> (prod (list (prod N term)) (list (prod term term))) -> option (list (prod N term)) => forall _268410 : prod N (prod N (prod N (prod N N))), forall pr : prod (list (prod N term)) (list (prod term term)), (unify' _268410 pr) = (@COND (option (list (prod N term))) (~ (LOOPFREE (@fst (list (prod N term)) (list (prod term term)) pr))) (@None (list (prod N term))) (@COND (option (list (prod N term))) ((@snd (list (prod N term)) (list (prod term term)) pr) = (@nil (prod term term))) (@Some (list (prod N term)) (@fst (list (prod N term)) (list (prod term term)) pr)) (@tpcases (option (list (prod N term))) (fun f : N => fun fargs : list term => fun g : N => fun gargs : list term => @COND (option (list (prod N term))) ((f = g) /\ ((@lengthN term fargs) = (@lengthN term gargs))) (unify' _268410 (@pair (list (prod N term)) (list (prod term term)) (@fst (list (prod N term)) (list (prod term term)) pr) (@app (prod term term) (@zip term term fargs gargs) (@tl (prod term term) (@snd (list (prod N term)) (list (prod term term)) pr))))) (@None (list (prod N term)))) (fun x : N => fun t : term => @COND (option (list (prod N term))) (@List.In N x (@List.map (prod N term) N (@fst N term) (@fst (list (prod N term)) (list (prod term term)) pr))) (unify' _268410 (@pair (list (prod N term)) (list (prod term term)) (@fst (list (prod N term)) (list (prod term term)) pr) (@cons (prod term term) (@pair term term (@assoc N term x (@fst (list (prod N term)) (list (prod term term)) pr)) t) (@tl (prod term term) (@snd (list (prod N term)) (list (prod term term)) pr))))) (@COND (option (list (prod N term))) ((istriv (@fst (list (prod N term)) (list (prod term term)) pr) x t) = Exception) (@None (list (prod N term))) (@COND (option (list (prod N term))) ((istriv (@fst (list (prod N term)) (list (prod term term)) pr) x t) = TT) (unify' _268410 (@pair (list (prod N term)) (list (prod term term)) (@fst (list (prod N term)) (list (prod term term)) pr) (@tl (prod term term) (@snd (list (prod N term)) (list (prod term term)) pr)))) (unify' _268410 (@pair (list (prod N term)) (list (prod term term)) (@cons (prod N term) (@pair N term x t) (@fst (list (prod N term)) (list (prod term term)) pr)) (@tl (prod term term) (@snd (list (prod N term)) (list (prod term term)) pr))))))) (fun f : N => fun args : list term => fun x : N => unify' _268410 (@pair (list (prod N term)) (list (prod term term)) (@fst (list (prod N term)) (list (prod term term)) pr) (@cons (prod term term) (@pair term term (V x) (Fn f args)) (@tl (prod term term) (@snd (list (prod N term)) (list (prod term term)) pr))))) (@mappings.hd (prod term term) (@snd (list (prod N term)) (list (prod term term)) pr)))))) (@pair N (prod N (prod N (prod N N))) (NUMERAL (BIT1 (BIT0 (BIT1 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N N)) (NUMERAL (BIT0 (BIT1 (BIT1 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N N) (NUMERAL (BIT1 (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N N (NUMERAL (BIT0 (BIT1 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (NUMERAL (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 (BIT1 N0)))))))))))).
-Lemma unify_def : unify = (@ε ((prod N (prod N (prod N (prod N N)))) -> (prod (list (prod N term)) (list (prod term term))) -> option (list (prod N term))) (fun unify' : (prod N (prod N (prod N (prod N N)))) -> (prod (list (prod N term)) (list (prod term term))) -> option (list (prod N term)) => forall _268410 : prod N (prod N (prod N (prod N N))), forall pr : prod (list (prod N term)) (list (prod term term)), (unify' _268410 pr) = (@COND (option (list (prod N term))) (~ (LOOPFREE (@fst (list (prod N term)) (list (prod term term)) pr))) (@None (list (prod N term))) (@COND (option (list (prod N term))) ((@snd (list (prod N term)) (list (prod term term)) pr) = (@nil (prod term term))) (@Some (list (prod N term)) (@fst (list (prod N term)) (list (prod term term)) pr)) (@tpcases (option (list (prod N term))) (fun f : N => fun fargs : list term => fun g : N => fun gargs : list term => @COND (option (list (prod N term))) ((f = g) /\ ((@lengthN term fargs) = (@lengthN term gargs))) (unify' _268410 (@pair (list (prod N term)) (list (prod term term)) (@fst (list (prod N term)) (list (prod term term)) pr) (@app (prod term term) (@zip term term fargs gargs) (@tl (prod term term) (@snd (list (prod N term)) (list (prod term term)) pr))))) (@None (list (prod N term)))) (fun x : N => fun t : term => @COND (option (list (prod N term))) (@List.In N x (@List.map (prod N term) N (@fst N term) (@fst (list (prod N term)) (list (prod term term)) pr))) (unify' _268410 (@pair (list (prod N term)) (list (prod term term)) (@fst (list (prod N term)) (list (prod term term)) pr) (@cons (prod term term) (@pair term term (@assoc N term x (@fst (list (prod N term)) (list (prod term term)) pr)) t) (@tl (prod term term) (@snd (list (prod N term)) (list (prod term term)) pr))))) (@COND (option (list (prod N term))) ((istriv (@fst (list (prod N term)) (list (prod term term)) pr) x t) = Exception) (@None (list (prod N term))) (@COND (option (list (prod N term))) ((istriv (@fst (list (prod N term)) (list (prod term term)) pr) x t) = TT) (unify' _268410 (@pair (list (prod N term)) (list (prod term term)) (@fst (list (prod N term)) (list (prod term term)) pr) (@tl (prod term term) (@snd (list (prod N term)) (list (prod term term)) pr)))) (unify' _268410 (@pair (list (prod N term)) (list (prod term term)) (@cons (prod N term) (@pair N term x t) (@fst (list (prod N term)) (list (prod term term)) pr)) (@tl (prod term term) (@snd (list (prod N term)) (list (prod term term)) pr))))))) (fun f : N => fun args : list term => fun x : N => unify' _268410 (@pair (list (prod N term)) (list (prod term term)) (@fst (list (prod N term)) (list (prod term term)) pr) (@cons (prod term term) (@pair term term (V x) (Fn f args)) (@tl (prod term term) (@snd (list (prod N term)) (list (prod term term)) pr))))) (@mappings.hd (prod term term) (@snd (list (prod N term)) (list (prod term term)) pr)))))) (@pair N (prod N (prod N (prod N N))) (NUMERAL (BIT1 (BIT0 (BIT1 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N N)) (NUMERAL (BIT0 (BIT1 (BIT1 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N N) (NUMERAL (BIT1 (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N N (NUMERAL (BIT0 (BIT1 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (NUMERAL (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 (BIT1 N0))))))))))))).
-Proof. exact (eq_refl unify). Qed.
-Print tl.
-
-Definition unifies v l := Forall (fun c => match c with (t,t') => termsubst v t = termsubst v t' end) l.
-
-Lemma unifies_def : unifies = (fun _268411 : N -> term => fun _268412 : list (prod term term) => @List.Forall (prod term term) (@ε ((prod term term) -> Prop) (fun f : (prod term term) -> Prop => forall s : term, forall t : term, @eq Prop (f (@pair term term s t)) ((termsubst _268411 s) = (termsubst _268411 t)))) _268412).
-Proof.
-  ext v l. unfold unifies. f_equal.
-  align_ε'. reflexivity.
-  intros f' H H'. ext (t,t'). now rewrite H'.
-Qed.
-
-(* THE is a great very easy partial function to test basic ideas about automatic alignments
-   of partial functions. It is the projection of option A onto A, not defined on None. *)
-
-Lemma cases_equal {A B : Type} {f f' : A -> B} (* splits the goal into cases P and Q *)
-  (P Q : A -> Prop) (H : forall a, P a \/ Q a) (a : A) :
-  (P a -> f a = f' a) -> (Q a -> f a = f' a) -> f a = f' a.
-Proof.
-  intros HP HQ. destruct (H a);auto.
-Qed.
-
-Record partial_case {A : Type} := (* for a case to be fully automated, one needs to defined
-                                     it inductively, while also defining its negation recursively,
-                                     and proving that they do cover all cases. *)
-  { case : A -> Prop ; negcase : A -> Prop ; cover_proof : forall a, case a \/ negcase a }.
-
-Lemma partial_align1_spec1 {U A B : Type'} {uv0 : U} {x : A}
-  (Q : A -> Prop) (f : U -> A -> B) (P : (U -> A -> B) -> Prop) :
-  P f -> (forall f' uv x, P f ->  P f' -> Q x ->
-  f uv x = f' uv x) -> Q x -> f uv0 x = ε P uv0 x.
-Proof.
-  intros Hf Hunique. apply Hunique;auto.
-  apply ε_spec. now exists f.
-Qed.
-
-Lemma partial_align1_spec2 {U A B C : Type'} {uv0 : U} {x : B} {y : A}
-  (Q : A -> Prop) (f : U -> B -> A -> C) (P : (U -> B -> A -> C) -> Prop) :
-  P f -> (forall f' uv x y, P f ->  P f' -> Q y ->
-  f uv x y = f' uv x y) -> Q y -> f uv0 x y = ε P uv0 x y.
-Proof.
-  intros Hf Hunique. apply Hunique;auto.
-  apply ε_spec. now exists f.
-Qed.
-
-Lemma partial_align1_spec3 {U A B C D : Type'} {uv0 : U} {x : B} {y : C} {z : A}
-  (Q : A -> Prop) (f : U -> B -> C -> A -> D) (P : (U -> B -> C -> A -> D) -> Prop) :
-  P f -> (forall f' uv x y z, P f ->  P f' -> Q z ->
-  f uv x y z = f' uv x y z) -> Q z -> f uv0 x y z = ε P uv0 x y z.
-Proof.
-  intros Hf Hunique. apply Hunique;auto.
-  apply ε_spec. now exists f.
-Qed.
-
-Ltac partial_align1_spec P x :=
-  match goal with
-  | |- P x -> ?f x = ε _ _ x => apply (partial_align1_spec1 P (fun _ => f))
-  | |- P x -> ?f _ x = ε _ _ _ x => apply (partial_align1_spec2 P (fun _ => f))
-  | |- P x -> ?f _ _ x = ε _ _ _ _ x => apply (partial_align1_spec3 P (fun _ => f)) end ;
-  clear x ;
-  [ repeat split ; auto
-  | let f' := fresh "f'" in
-    let uv := fresh "uv" in
-    let H := fresh in
-    let H' := fresh "H'" in
-    let Px := fresh "Px" in
-    try intros f' uv y z x H H' Px ;
-    try (intros f' uv y x H H' Px ; try ext z) ;
-    try (intros f' uv x H H' Px ; try ext y ; try ext z) ;
-    induction Px ;
-    try full_destruct ;
-    repeat match goal with
-    H : _ |- _ => rewrite H end ;
-    auto ].
-
-Ltac palign_1var c nc cp x :=
-  let ncx := fresh in
-  apply (cases_equal c nc cp x) ;
-  [ partial_align1_spec c x
-  | intro ncx ; induction ncx ; auto ;
-    try now repeat match goal with H : _ |- _ => rewrite H end ].
-
-Lemma partial_align2_spec12 {U A B : Type'} {uv0 : U} {x y : A}
-  (Q : A -> Prop) (f : U -> A -> A -> B) (P : (U -> A -> A -> B) -> Prop) :
-  P f -> (forall f' uv x y, P f ->  P f' -> Q x -> Q y ->
-  f uv x y = f' uv x y) -> Q x -> Q y -> f uv0 x y = ε P uv0 x y.
-Proof.
-  intros Hf Hunique. apply Hunique;auto.
-  apply ε_spec. now exists f.
-Qed.
-
-Lemma partial_align2_spec23 {U A B C : Type'} {uv0 : U} {x : B} {y z : A}
-  (Q : A -> Prop) (f : U -> B -> A -> A -> C) (P : (U -> B -> A -> A -> C) -> Prop) :
-  P f -> (forall f' uv x y, P f ->  P f' -> Q y -> Q z ->
-  f uv x y z = f' uv x y z) -> Q y -> Q z -> f uv0 x y z = ε P uv0 x y z.
-Proof.
-  intros Hf Hunique. apply Hunique;auto.
-  apply ε_spec. now exists f.
-Qed.
-
-
-Ltac partial_align2_spec P x y :=
-  match goal with
-  | |- P x -> P y -> ?f x y = ε _ _ x y => apply (partial_align2_spec12 P (fun _ => f))
-  | |- P x -> P y -> ?f _ x y = ε _ _ _ x y => apply (partial_align2_spec23 P (fun _ => f)) end ;
-  try apply (partial_align2_spec12 P) ;
-  try apply (partial_align2_spec23 P) ;
-  clear x y ;
-  [ repeat split ; auto
-  | let f' := fresh "f'" in
-    let uv := fresh "uv" in
-    let z := fresh "z" in
-    let H := fresh in
-    let H' := fresh "H'" in
-    let Px := fresh "Px" in
-    let Py := fresh "Py" in
-    try intros f' uv z x y H H' Px Py ;
-    try (intros f' uv x y H H' Px Py ; try ext z) ;
-    induction Px ; induction Py ;
-    try full_destruct ;
-    repeat match goal with
-    H : _ |- _ => rewrite H end ;
-    auto ].
-
-Ltac palign_2var c nc cp x y :=
-  let Hx := fresh in
-  let Hy := fresh in
-  apply (cases_equal c nc cp y) ;
-  apply (cases_equal c nc cp x) ;
-  [ partial_align2_spec c x y
-  | intros Hx Hy ; induction Hx ; induction Hy ; auto ;
-    try now repeat match goal with H : _ |- _ => rewrite H end ].
-
-Lemma partial_align3_spec {U A B : Type'} {uv0 : U} {x y z : A}
-  (Q : A -> Prop) (f : U -> A -> A -> A -> B) (P : (U -> A -> A -> A -> B) -> Prop) :
-  P f -> (forall f' uv x y z, P f ->  P f' -> Q x -> Q y -> Q z ->
-  f uv x y z = f' uv x y z) -> Q x -> Q y -> Q z -> f uv0 x y z = ε P uv0 x y z.
-Proof.
-  intros Hf Hunique. apply Hunique;auto.
-  apply ε_spec. now exists f.
-Qed.
-
-
-Ltac partial_align3_spec P x y z :=
-  match goal with |- P x -> P y -> P z -> ?f x y z = ε _ _ x y z =>
-    apply (partial_align3_spec P (fun _ => f)) end ;
-  clear x y z ;
-  [ repeat split ; auto
-  | let f' := fresh "f'" in
-    let uv := fresh "uv" in
-    let H := fresh in
-    let H' := fresh "H'" in
-    let Px := fresh "Px" in
-    let Py := fresh "Py" in
-    let Pz := fresh "Pz" in
-    intros f' uv z x y H H' Px Py Pz ;
-    induction Px ; induction Py ; induction Pz ;
-    try full_destruct ;
-    repeat match goal with
-    H : _ |- _ => rewrite H end ;
-    auto ].
-
-Ltac palign_3var c nc cp x y z :=
-  let Hx := fresh in
-  let Hy := fresh in
-  let Hz := fresh in
-  apply (cases_equal c nc cp z) ;
-  apply (cases_equal c nc cp y) ;
-  apply (cases_equal c nc cp x) ;
-  [ partial_align3_spec c x y z
-  | intros Hx Hy Hz ; induction Hx ; induction Hy ; induction Hz ; auto ;
-    try now repeat match goal with H : _ |- _ => rewrite H end ].
-
-
-Ltac partial_align pcase := (* pcase must contain two inductive cases over some type A and a proof
-                               that these cases cover A. *)
-  let c := fresh "c" in
-  let nc := fresh "nc" in
-  let cp := fresh "cp" in
-  set (c := case pcase) ;
-  set (nc := negcase pcase) ;
-  set (cp := cover_proof pcase) ;
-  let x := fresh "x" in
-  let y := fresh "y" in
-  let z := fresh "z" in
-  ext x ;
-  ( ext y ;
-    ( ext z ; palign_3var c nc cp x y z +
-      palign_2var c nc cp y z +
-      palign_1var c nc cp z ) +
-    palign_2var c nc cp x y +
-    palign_1var c nc cp y ) +
-  palign_1var c nc cp x.
-
-Inductive is_Some (A : Type) : option A -> Prop :=
-  is_Some_def : forall a, is_Some A (Some a).
-
-Inductive is_None (A : Type) : option A -> Prop :=
-  is_None_def : is_None A None.
-
-Lemma Some_None_cover (A : Type) : forall a : option A, is_Some A a \/ is_None A a.
-Proof.
-  induction a.
-  left. exact (is_Some_def A a). right. exact (is_None_def A).
-Qed.
-
-Definition on_Some (A : Type) :=
-{| case := is_Some A ; negcase := is_None A ; cover_proof := Some_None_cover A |}.
-
-Definition THE {_211969 : Type'} : (option _211969) -> _211969 := @ε ((prod N (prod N N)) -> (option _211969) -> _211969) (fun THE' : (prod N (prod N N)) -> (option _211969) -> _211969 => forall _274433 : prod N (prod N N), forall x : _211969, (THE' _274433 (@Some _211969 x)) = x) (@pair N (prod N N) (NUMERAL (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 (BIT0 (BIT1 N0)))))))) (@pair N N (NUMERAL (BIT0 (BIT0 (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 N0)))))))) (NUMERAL (BIT1 (BIT0 (BIT1 (BIT0 (BIT0 (BIT0 (BIT1 N0)))))))))).
-
-Definition the {A : Type'} (x : option A) :=
-  match x with None => THE None | Some a => a end.
-
-Lemma THE_def {_211969 : Type'} : (@the _211969) = (@ε ((prod N (prod N N)) -> (option _211969) -> _211969) (fun THE' : (prod N (prod N N)) -> (option _211969) -> _211969 => forall _274433 : prod N (prod N N), forall x : _211969, (THE' _274433 (@Some _211969 x)) = x) (@pair N (prod N N) (NUMERAL (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 (BIT0 (BIT1 N0)))))))) (@pair N N (NUMERAL (BIT0 (BIT0 (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 N0)))))))) (NUMERAL (BIT1 (BIT0 (BIT1 (BIT0 (BIT0 (BIT0 (BIT1 N0))))))))))).
-Proof. partial_align (on_Some _211969). Qed.
-
-
+(*****************************************************************************)
+(* Trivial definitions *)
+(*****************************************************************************)
+Definition V_def' := eq_refl V.
+Definition Fn_def' := eq_refl Fn.
+Definition FFalse_def' := eq_refl FFalse.
+Definition FImp_def' := eq_refl FImp.
+Definition Atom_def' := eq_refl Atom.
+Definition FAll_def' := eq_refl FAll.
+Definition TT_def' := eq_refl TT.
+Definition FF_def' := eq_refl FF.
+Definition Exception_def' := eq_refl Exception.
 
 
 

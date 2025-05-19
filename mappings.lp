@@ -80,12 +80,16 @@ builtin "True" ≔ hashek;
 builtin "hashek_def" ≔ hashek_def;
 builtin "Basics.compose" ≔ o;
 builtin "o_def" ≔ o_def;
-builtin "id" ≔ I;
+builtin "Datatypes.id" ≔ I;
 builtin "I_def" ≔ I_def;
 builtin "Basics.apply" ≔ LET;
 builtin "LET_def" ≔ LET_def;
-builtin "id" ≔ LET_END;
+builtin "Datatypes.id" ≔ LET_END;
 builtin "LET_END_def" ≔ LET_END_def;
+builtin "MEASURE" ≔ MEASURE;
+builtin "MEASURE_def" ≔ MEASURE_def;
+builtin "Acc" ≔ WFP;
+builtin "WFP_def" ≔ WFP_def;
 
 // unit type
 builtin "unit" ≔ unit;
@@ -266,6 +270,8 @@ builtin "List.Forall" ≔ ALL;
 builtin "ALL_def" ≔ ALL_def;
 builtin "List.ForallOrdPairs" ≔ PAIRWISE;
 builtin "PAIRWISE_def" ≔ PAIRWISE_def;
+builtin "FILTER" ≔ FILTER;
+builtin "FILTER_def" ≔ FILTER_def;
 //builtin "List.filter" ≔ FILTER;
 //builtin "FILTER_def" ≔ FILTER_def;
 builtin "List.In" ≔ MEM;
@@ -274,9 +280,9 @@ builtin "repeatN" ≔ REPLICATE;
 builtin "REPLICATE_def" ≔ REPLICATE_def;
 builtin "fold_right_with_perm_args" ≔ ITLIST;
 builtin "ITLIST_def" ≔ ITLIST_def;
-builtin "hd" ≔ HD;
+builtin "HOLLight_Real_With_N.mappings.hd" ≔ HD;
 builtin "HD_def" ≔ HD_def;
-builtin "tl" ≔ TL;
+builtin "HOLLight_Real_With_N.mappings.tl" ≔ TL;
 builtin "TL_def" ≔ TL_def;
 builtin "is_nil" ≔ NULL;
 builtin "NULL_def" ≔ NULL_def;
@@ -286,7 +292,7 @@ builtin "List.Forall2" ≔ ALL2;
 builtin "ALL2_def" ≔ ALL2_def;
 builtin "last" ≔ LAST;
 builtin "LAST_def" ≔ LAST_def;
-builtin "List.map2" ≔ MAP2;
+builtin "map2" ≔ MAP2;
 builtin "MAP2_def" ≔ MAP2_def;
 builtin "Nth" ≔ EL;
 builtin "EL_def" ≔ EL_def;
@@ -367,8 +373,8 @@ builtin "treal_neg" ≔ treal_neg;
 builtin "treal_neg_def" ≔ treal_neg_def;
 
 builtin "R" ≔ Real;
-builtin "mk_real" ≔ mk_real;
-builtin "dest_real" ≔ dest_real;
+builtin "HOLLight.mappings.mk_real" ≔ mk_real;
+builtin "HOLLight.mappings.dest_real" ≔ dest_real;
 builtin "axiom_23" ≔ axiom_23;
 builtin "axiom_24" ≔ axiom_24;
 
@@ -477,12 +483,26 @@ builtin "UNIONS" ≔ UNIONS;
 builtin "UNIONS_def" ≔ UNIONS_def;
 builtin "Ensembles.Union" ≔ UNION;
 builtin "UNION_def" ≔ UNION_def;
+builtin "INTERS" ≔ INTERS;
+builtin "INTERS_def" ≔ INTERS_def;
 builtin "Ensembles.Setminus" ≔ DIFF;
 builtin "DIFF_def" ≔ DIFF_def;
 builtin "Ensembles.Subtract" ≔ DELETE;
 builtin "DELETE_def" ≔ DELETE_def;
+builtin "Ensembles.Strict_Included" ≔ PSUBSET;
+builtin "PSUBSET_def" ≔ PSUBSET_def;
+builtin "Ensembles.Disjoint" ≔ DISJOINT;
+builtin "DISJOINT_def" ≔ DISJOINT_def;
+builtin "is_Singleton" ≔ SING;
+builtin "SING_def" ≔ SING_def;
 builtin "list_Union" ≔ LIST_UNION;
 builtin "LIST_UNION_def" ≔ LIST_UNION_def;
+builtin "set_of_list" ≔ set_of_list;
+builtin "set_of_list_def" ≔ set_of_list_def;
+builtin "list_of_set" ≔ list_of_set;
+builtin "list_of_set_def" ≔ list_of_set_def;
+builtin "TC" ≔ TC;
+builtin "TC_def" ≔ TC_def;
 
 // finite sets
 builtin "FINITE" ≔ FINITE;
@@ -545,83 +565,57 @@ builtin "_dest_tybit1" ≔ _dest_tybit1;
 builtin "axiom_39" ≔ axiom_39;
 builtin "axiom_40" ≔ axiom_40;
 
-// frag
-builtin "frag" ≔ frag;
-builtin "mk_frag" ≔ mk_frag;
-builtin "dest_frag" ≔ dest_frag;
-builtin "axiom_41" ≔ axiom_41;
-builtin "axiom_42" ≔ axiom_42;
-
-// group
-builtin "Group" ≔ Group;
-builtin "group" ≔ group;
-builtin "group_operations" ≔ group_operations;
-builtin "axiom_43" ≔ axiom_43;
-builtin "axiom_44" ≔ axiom_44;
-
-// matroid
-builtin "Matroid" ≔ Matroid;
-builtin "matroid" ≔ matroid;
-builtin "dest_matroid" ≔ dest_matroid;
-builtin "axiom_45" ≔ axiom_45;
-builtin "axiom_46" ≔ axiom_46;
-
 // topology
 builtin "Topology" ≔ Topology;
 builtin "topology" ≔ topology;
 builtin "open_in" ≔ open_in;
-builtin "axiom_47" ≔ axiom_47;
-builtin "axiom_48" ≔ axiom_48;
+builtin "axiom_47" ≔ axiom_41;
+builtin "axiom_48" ≔ axiom_42;
 
-// net
-builtin "net" ≔ net;
-builtin "mk_net" ≔ mk_net;
-builtin "dest_net" ≔ dest_net;
-builtin "axiom_49" ≔ axiom_49;
-builtin "axiom_50" ≔ axiom_50;
-
-// metric_space
+// Metric from Library/analysis.ml
+builtin "ismet" ≔ ismet;
+builtin "ismet_def" ≔ ismet_def;
 builtin "Metric" ≔ Metric;
+builtin "Metric_def" ≔ Metric_def;
+builtin "mdist" ≔ mdist;
+builtin "mdist_def" ≔ mdist_def;
 builtin "metric" ≔ metric;
-builtin "dest_metric" ≔ dest_metric;
-builtin "axiom_51" ≔ axiom_51;
-builtin "axiom_52" ≔ axiom_52;
-
-// multivector
-builtin "Multivector" ≔ Multivector;
-builtin "mk_multivector" ≔ mk_multivector;
-builtin "dest_multivector" ≔ dest_multivector;
-builtin "axiom_53" ≔ axiom_53;
-builtin "axiom_54" ≔ axiom_54;
+builtin "metric_def" ≔ metric_def;
+builtin "_mk_dest_Metric" ≔ axiom_43;
+builtin "_dest_mk_Metric" ≔ axiom_44;
 
 // multiset
 
 builtin "Multiset" ≔ Multiset;
-builtin "id" ≔ multiset;
-builtin "id" ≔ multiplicity;
+builtin "multiset" ≔ multiset;
+builtin "multiplicity" ≔ multiplicity;
+builtin "_mk_dest_Multiset" ≔ axiom_45;
+builtin "_dest_mk_Multiset" ≔ axiom_46;
 builtin "mempty" ≔ mempty;
 builtin "mempty_def" ≔ mempty_def;
 builtin "mmember" ≔ mmember;
-builtin "mmember_def" ≔ mmember;
+builtin "mmember_def" ≔ mmember_def;
 builtin "msing" ≔ msing;
 builtin "msing_def" ≔ msing_def;
 builtin "munion" ≔ munion;
 builtin "munion_def" ≔ munion_def;
 builtin "mdiff" ≔ mdiff;
 builtin "mdiff_def" ≔ mdiff_def;
-builtin "Acc" ≔ WFP;
-builtin "WFP_def" ≔ WFP_def;
 builtin "morder" ≔ morder;
 builtin "morder_def" ≔ morder_def;
 
 // terms
 
 builtin "term" ≔ term;
-builtin "list term" ≔ list_204637;
+builtin "list_204637" ≔ list_204637;
 builtin "_mk_list_204637" ≔ _mk_list_204637;
 builtin "_dest_list_204637" ≔ _dest_list_204637;
 builtin "_mk_term" ≔ _mk_term;
 builtin "_dest_term" ≔ _dest_term;
+builtin "_mk_dest_list_204637" ≔ axiom_47;
+builtin "_dest_mk_list_204637" ≔ axiom_48;
+builtin "_mk_dest_term" ≔ axiom_49;
+builtin "_dest_mk_term" ≔ axiom_50;
 builtin "V" ≔ _204638;
 builtin "V_def" ≔ _204638_def;
 builtin "Fn" ≔ _204639;
@@ -633,15 +627,17 @@ builtin "_204641_def" ≔ _204641_def;
 builtin "Fn" ≔ _204757;
 builtin "Fn_def" ≔ _204757_def;
 builtin "V" ≔ V;
-builtin "V_def" ≔ V_def;
+builtin "V_def'" ≔ V_def;
 builtin "Fn" ≔ Fn;
-builtin "Fn_def" ≔ Fn_def;
+builtin "Fn_def'" ≔ Fn_def;
 
 // formulae and functions on both term and form
 
 builtin "form" ≔ form;
 builtin "_dest_form" ≔ _dest_form;
 builtin "_mk_form" ≔ _mk_form;
+builtin "_mk_dest_form" ≔ axiom_51;
+builtin "_dest_mk_form" ≔ axiom_52;
 builtin "FFalse" ≔ _204798;
 builtin "FFalse_def" ≔ _204798_def;
 builtin "Atom" ≔ _204799;
@@ -650,26 +646,26 @@ builtin "FImp" ≔ _204800;
 builtin "FImp_def" ≔ _204800_def;
 builtin "FAll" ≔ _204801;
 builtin "FAll_def" ≔ _204801_def;
-builtin "FFalse" ≔ FFalse;
-builtin "FFalse_def" ≔ FFalse_def;
+builtin "FFalse" ≔ False;
+builtin "FFalse_def'" ≔ False_def;
 builtin "Atom" ≔ Atom;
-builtin "Atom_def" ≔ Atom_def;
-builtin "FImp" ≔ FImp;
-builtin "FImp_def" ≔ FImp_def;
-builtin "FAll" ≔ FAll;
-builtin "FAll_def" ≔ FAll_def;
+builtin "Atom_def'" ≔ Atom_def;
+builtin "FImp" ≔ ⟶;
+builtin "FImp_def'" ≔ ⟶_def;
+builtin "FAll" ≔ !!;
+builtin "FAll_def'" ≔ !!_def;
 builtin "Not" ≔ Not;
 builtin "Not_def" ≔ Not_def;
-builtin "FTrue" ≔ FTrue;
-builtin "FTrue_def" ≔ FTrue_def;
-builtin "FOr" ≔ FOr;
-builtin "FOr_def" ≔ FOr_def;
-builtin "FAnd" ≔ FAnd;
-builtin "FAnd_def" ≔ FAnd_def;
-builtin "FEquiv" ≔ FEquiv;
-builtin "FEquiv_def" ≔ FEquiv_def;
-builtin "FEx" ≔ FEx;
-builtin "FEx_def" ≔ FEx_def;
+builtin "FTrue" ≔ True;
+builtin "FTrue_def" ≔ True_def;
+builtin "FOr" ≔ ¦¦;
+builtin "FOr_def" ≔ ¦¦_def;
+builtin "FAnd" ≔ &&;
+builtin "FAnd_def" ≔ &&_def;
+builtin "FEquiv" ≔ ↔;
+builtin "FEquiv_def" ≔ ↔_def;
+builtin "FEx" ≔ ??;
+builtin "FEx_def" ≔ ??_def;
 builtin "functions_term" ≔ functions_term;
 builtin "functions_term_def" ≔ functions_term_def;
 builtin "functions_form" ≔ functions_form;
@@ -732,7 +728,7 @@ builtin "prenex" ≔ prenex;
 builtin "prenex_def" ≔ prenex_def;
 builtin "universal" ≔ universal;
 builtin "universal_def" ≔ universal_def;
-builtin "size" ≔ size;
+builtin "sizeN" ≔ size;
 builtin "size_def" ≔ size_def;
 builtin "Prenex_right" ≔ Prenex_right;
 builtin "Prenex_right_def" ≔ Prenex_right_def;
@@ -849,17 +845,19 @@ builtin "CALLORDER_def" ≔ CALLORDER_def;
 builtin "retval" ≔ retval;
 builtin "_mk_retval" ≔ _mk_retval;
 builtin "_dest_retval" ≔ _dest_retval;
+builtin "_mk_dest_retval" ≔ axiom_53;
+builtin "_dest_mk_retval" ≔ axiom_54;
 builtin "TT" ≔ _261630;
 builtin "TT_def" ≔ _261630_def;
 builtin "FF" ≔ _261631;
 builtin "FF_def" ≔ _261631_def;
-builtin "None" ≔ _261632;
+builtin "Exception" ≔ _261632;
 builtin "Exception_def" ≔ _261632_def;
 builtin "TT" ≔ TT;
-builtin "TT_def" ≔ TT_def;
+builtin "TT_def'" ≔ TT_def;
 builtin "FF" ≔ FF;
-builtin "FF_def" ≔ FF_def;
+builtin "FF_def'" ≔ FF_def;
 builtin "Exception" ≔ Exception;
-builtin "Exception_def" ≔ Exception_def;
+builtin "Exception_def'" ≔ Exception_def;
 //builtin "diese" ≔ diese;
 //builtin "diese_def" ≔ diese_def;
