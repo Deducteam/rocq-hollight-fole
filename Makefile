@@ -1,4 +1,4 @@
-LIBNAME=HOLLight_Logic1
+LIBNAME=HOLLight_Logic
 
 .SUFFIXES:
 
