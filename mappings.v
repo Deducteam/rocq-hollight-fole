@@ -223,6 +223,23 @@ let x := fresh "x" in (* to replace with newer ind_align after the merge *)
                                we just try to rewrite [a = f x1 ... xn] if it exists *)
     end ; try now (constructor;auto) ].
 
+Ltac fastind_align :=
+let x := fresh "x" in (* to replace with newer ind_align after the merge *)
+  let y := fresh "y" in
+  let z := fresh "z" in
+  let H := fresh in
+  try ext x ; try ext y ; try ext z ; apply prop_ext ; intro H ;
+  [ let P' := fresh "P'" in
+    let H' := fresh "H'" in
+    intros P' H' ; induction H ; apply H'
+  | apply H ; (* applying the HOL-Light definition to the coq version of P itself *)
+    clear H ; try clear x ; try clear y ; try clear z ;
+    try intros x y z H ; try intros x y H ; try intros x H ;
+    full_destruct ; repeat match goal with
+    H : _ |- _ => rewrite H (* not much to do, each clause should be proved with a rule,
+                               we just try to rewrite [a = f x1 ... xn] if it exists *)
+    end ; try now (constructor;auto) ].
+
 (*****************************************************************************)
 (* Miscelaneous, set theory *)
 (*****************************************************************************)
