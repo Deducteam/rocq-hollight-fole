@@ -1,5 +1,5 @@
 # coq-hol-light-logic
-WIP Translation of the HOL-Light [Logic library](https://github.com/jrh13/hol-light/tree/master/Logic) using [hol2dk](https://github.com/Deducteam/hol2dk).
+Translation of the HOL-Light [Logic library](https://github.com/jrh13/hol-light/tree/master/Logic) using [hol2dk](https://github.com/Deducteam/hol2dk).
 
 mappings only go up to (and not including) unify. The full library will be available as coq-hol-light-Logic2 and use results from this translation to define unify
 
