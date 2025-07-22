@@ -1094,7 +1094,9 @@ Proof.
   now rewrite <- asboolE, asbool_neg.
 Qed.
 
-Lemma DISJOINT_def (A : Type') : disj_set = (fun _32467 : A -> Prop => fun _32468 : A -> Prop => (@setI A _32467 _32468) = (@set0 A)) :> (set A -> set A -> Prop).
+Notation "@DISJOINT" := (@disj_set : forall T, set T -> set T -> Prop) (only parsing).
+
+Lemma DISJOINTdef (A : Type') : @DISJOINT A = (fun _32467 : A -> Prop => fun _32468 : A -> Prop => (@setI A _32467 _32468) = (@set0 A)) :> (set A -> set A -> Prop).
 Proof.
   by ext 2 => B C ; rewrite <- asboolE.
 Qed.
@@ -1451,7 +1453,7 @@ Definition Ninterval (n m : N) := [set (N.of_nat k) | k in `[N.to_nat n, N.to_na
 (* four dots because of preexisting meaning to .. and ... in Rocq *)
 Notation "[ n  '....'  m ]" := (Ninterval n m).
 
-Notation "x 'between' n 'and' m " := ([n .... m] x) (at level 1).
+Notation "x 'BETWEEN' n 'AND' m " := ([n .... m] x) (at level 1).
 
 Lemma to_nat_inj_le : forall n m, (N.to_nat n <= N.to_nat m)%coq_nat = (n <= m).
 Proof.
@@ -1466,7 +1468,7 @@ Proof. by move=> /image_inj finj; apply/idP/idP ; rewrite !(inE, in_setE) finj. 
 
 (* The one to actually use in proofs, to take advantage of lia
    for example. *)
-Definition Ninterval_def' : Ninterval = fun n m k => n <= k <= m.
+Lemma Ninterval_def : Ninterval = fun n m k => n <= k <= m.
 Proof.
   rewrite/Ninterval ; ext 3 => n m k.
   rewrite -{1}[k]Nnat.N2Nat.id -(@in_setE N) mem_image ; last by exact Nnat.Nat2N.inj.
@@ -1478,9 +1480,9 @@ Qed.
 (* Add rewriting Ninterval_def' to ssimpl. *)
 Ltac ssimpl ::=
   rewrite ?SPEC_IMAGE?SPEC_elim/GSPEC/SETSPEC/DELETE/IMAGE/INTERS/UNIONS/
-  INSERT/BIT1/BIT0/NUMERAL?setU0?IN_def?Ninterval_def'.
+  INSERT/BIT1/BIT0/NUMERAL?setU0?IN_def?Ninterval_def.
 
-Lemma Ninterval_def : Ninterval = (fun _66922 : N => fun _66923 : N => @GSPEC N (fun GEN_PVAR_231 : N => exists x : N, @SETSPEC N GEN_PVAR_231 ((N.le _66922 x) /\ (N.le x _66923)) x)).
+Lemma dotdot_def : Ninterval = (fun _66922 : N => fun _66923 : N => @GSPEC N (fun GEN_PVAR_231 : N => exists x : N, @SETSPEC N GEN_PVAR_231 ((N.le _66922 x) /\ (N.le x _66923)) x)).
 Proof. by ext 2 => n m ; ssimpl. Qed.
 
 

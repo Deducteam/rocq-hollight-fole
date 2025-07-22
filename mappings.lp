@@ -4,7 +4,7 @@ replaced by the given Coq expressions. */
 
 // primitive types
 builtin "Type'" ≔ Set;
-builtin "el" ≔ el;
+builtin "point" ≔ el;
 builtin "Prop" ≔ bool;
 builtin "arr" ≔ fun;
 
@@ -44,23 +44,23 @@ builtin "conj" ≔ ∧ᵢ;
 builtin "proj1" ≔ ∧ₑ₁;
 builtin "proj2" ≔ ∧ₑ₂;
 builtin "or_intro1" ≔ ∨ᵢ₁;
-builtin "or_intro2" ≔ ∨ᵢ₂;
+builtin "or_intror" ≔ ∨ᵢ₂;
 builtin "or_elim" ≔ ∨ₑ;
 builtin "ex_intro" ≔ ∃ᵢ;
 builtin "ex_elim" ≔ ∃ₑ;
 
 // HOL-Light rules
-builtin "eq_refl" ≔ REFL;
+builtin "REFL" ≔ REFL;
 builtin "EQ_MP" ≔ EQ_MP;
 builtin "MK_COMB" ≔ MK_COMB;
-builtin "eq_trans" ≔ TRANS;
-builtin "eq_sym" ≔ SYM;
+builtin "ssrfun.etrans" ≔ TRANS;
+builtin "ssrfun.esym" ≔ SYM;
 
 // HOL-Light axioms
 builtin "ε" ≔ ε;
 builtin "axiom_0" ≔ axiom_0;
 builtin "axiom_1" ≔ axiom_1;
-builtin "fun_ext" ≔ fun_ext;
+builtin "funext" ≔ fun_ext;
 builtin "prop_ext" ≔ prop_ext;
 
 // miscellaneous
@@ -68,7 +68,7 @@ builtin "COND" ≔ COND;
 builtin "COND_def" ≔ COND_def;
 builtin "eq" ≔ GEQ;
 builtin "GEQ_def" ≔ GEQ_def;
-builtin "ExtensionalityFacts.is_inverse" ≔ ISO;
+builtin "cancel2" ≔ ISO;
 builtin "ISO_def" ≔ ISO_def;
 builtin "ε" ≔ GABS;
 builtin "GABS_def" ≔ GABS_def;
@@ -78,14 +78,12 @@ builtin "False" ≔ _FALSITY_;
 builtin "_FALSITY__def" ≔ _FALSITY__def;
 builtin "True" ≔ hashek;
 builtin "hashek_def" ≔ hashek_def;
-builtin "Basics.compose" ≔ o;
-builtin "o_def" ≔ o_def;
-builtin "Datatypes.id" ≔ I;
-builtin "I_def" ≔ I_def;
-builtin "Basics.apply" ≔ LET;
+builtin "LET" ≔ LET;
 builtin "LET_def" ≔ LET_def;
-builtin "Datatypes.id" ≔ LET_END;
+builtin "LET_END" ≔ LET_END;
 builtin "LET_END_def" ≔ LET_END_def;
+builtin "Relation_Operators.clos_trans" ≔ TC;
+builtin "TC_def" ≔ TC_def;
 builtin "MEASURE" ≔ MEASURE;
 builtin "MEASURE_def" ≔ MEASURE_def;
 
@@ -205,9 +203,10 @@ builtin "INJA" ≔ INJA;
 builtin "INJA_def" ≔ INJA_def;
 builtin "INJF" ≔ INJF;
 builtin "INJF_def" ≔ INJF_def;
-
 builtin "ZRECSPACE" ≔ ZRECSPACE;
 builtin "ZRECSPACE_def" ≔ ZRECSPACE_def;
+builtin "FCONS" ≔ FCONS;
+builtin "FCONS_def" ≔ FCONS_def;
 builtin "recspace" ≔ recspace;
 builtin "_mk_rec" ≔ _mk_rec;
 builtin "_dest_rec" ≔ _dest_rec;
@@ -246,8 +245,6 @@ builtin "INR_def" ≔ INR_def;
 
 // lists
 builtin "list" ≔ list;
-builtin "FCONS" ≔ FCONS;
-builtin "FCONS_def" ≔ FCONS_def;
 builtin "_dest_list" ≔ _dest_list;
 builtin "_mk_list" ≔ _mk_list;
 builtin "axiom_15" ≔ axiom_15;
@@ -271,18 +268,16 @@ builtin "ALL_def" ≔ ALL_def;
 builtin "List.ForallOrdPairs" ≔ PAIRWISE;
 builtin "PAIRWISE_def" ≔ PAIRWISE_def;
 builtin "FILTER" ≔ FILTER;
-builtin "FILTER_def" ≔ FILTER_def;
-//builtin "List.filter" ≔ FILTER;
-//builtin "FILTER_def" ≔ FILTER_def;
+builtin "_FILTER_def" ≔ FILTER_def;
 builtin "List.In" ≔ MEM;
 builtin "MEM_def" ≔ MEM_def;
 builtin "repeatN" ≔ REPLICATE;
 builtin "REPLICATE_def" ≔ REPLICATE_def;
 builtin "fold_right_with_perm_args" ≔ ITLIST;
 builtin "ITLIST_def" ≔ ITLIST_def;
-builtin "HOLLight_Real_With_N.mappings.hd" ≔ HD;
+builtin "hd" ≔ HD;
 builtin "HD_def" ≔ HD_def;
-builtin "HOLLight_Real_With_N.mappings.tl" ≔ TL;
+builtin "tl" ≔ TL;
 builtin "TL_def" ≔ TL_def;
 builtin "is_nil" ≔ NULL;
 builtin "NULL_def" ≔ NULL_def;
@@ -373,8 +368,8 @@ builtin "treal_neg" ≔ treal_neg;
 builtin "treal_neg_def" ≔ treal_neg_def;
 
 builtin "R" ≔ Real;
-builtin "HOLLight.mappings.mk_real" ≔ mk_real;
-builtin "HOLLight.mappings.dest_real" ≔ dest_real;
+builtin "mk_real" ≔ mk_real;
+builtin "dest_real" ≔ dest_real;
 builtin "axiom_23" ≔ axiom_23;
 builtin "axiom_24" ≔ axiom_24;
 
@@ -465,59 +460,57 @@ builtin "int_lcm_def" ≔ int_lcm_def;
 // sets
 builtin "IN" ≔ IN;
 builtin "IN_def" ≔ IN_def;
-builtin "Ensembles.Empty_set" ≔ EMPTY;
+builtin "set0" ≔ EMPTY;
 builtin "EMPTY_def" ≔ EMPTY_def;
 builtin "INSERT" ≔ INSERT;
 builtin "INSERT_def" ≔ INSERT_def;
-builtin "Ensembles.Full_set" ≔ UNIV;
 builtin "UNIV_def" ≔ UNIV_def;
+builtin "setT" ≔ UNIV;
 builtin "GSPEC" ≔ GSPEC;
 builtin "GSPEC_def" ≔ GSPEC_def;
 builtin "SETSPEC" ≔ SETSPEC;
 builtin "SETSPEC_def" ≔ SETSPEC_def;
-builtin "Ensembles.Included" ≔ SUBSET;
+builtin "subset" ≔ SUBSET;
 builtin "SUBSET_def" ≔ SUBSET_def;
-builtin "Ensembles.Intersection" ≔ INTER;
-builtin "IMAGE" ≔ IMAGE;
-builtin "IMAGE_def" ≔ IMAGE_def;
+builtin "setU" ≔ UNION;
+builtin "UNION_def" ≔ UNION_def;
+builtin "setI" ≔ INTER;
 builtin "INTER_def" ≔ INTER_def;
 builtin "UNIONS" ≔ UNIONS;
 builtin "UNIONS_def" ≔ UNIONS_def;
-builtin "Ensembles.Union" ≔ UNION;
-builtin "UNION_def" ≔ UNION_def;
 builtin "INTERS" ≔ INTERS;
 builtin "INTERS_def" ≔ INTERS_def;
-builtin "Ensembles.Setminus" ≔ DIFF;
+builtin "IMAGE" ≔ IMAGE;
+builtin "IMAGE_def" ≔ IMAGE_def;
+builtin "setD" ≔ DIFF;
 builtin "DIFF_def" ≔ DIFF_def;
-builtin "Ensembles.Subtract" ≔ DELETE;
+builtin "DELETE" ≔ DELETE;
 builtin "DELETE_def" ≔ DELETE_def;
-builtin "Ensembles.Strict_Included" ≔ PSUBSET;
+builtin "proper" ≔ PSUBSET;
 builtin "PSUBSET_def" ≔ PSUBSET_def;
-builtin "Ensembles.Disjoint" ≔ DISJOINT;
-builtin "DISJOINT_def" ≔ DISJOINT_def;
-builtin "is_Singleton" ≔ SING;
+builtin "DISJOINT" ≔ DISJOINT;
+builtin "DISJOINTdef" ≔ DISJOINT_def;
+builtin "is_set1" ≔ SING;
 builtin "SING_def" ≔ SING_def;
 builtin "list_Union" ≔ LIST_UNION;
 builtin "LIST_UNION_def" ≔ LIST_UNION_def;
+
+// finite sets
+builtin "finite_set" ≔ FINITE;
+builtin "FINITE_def" ≔ FINITE_def;
+builtin "fold_set" ≔ ITSET;
+builtin "ITSET_def" ≔ ITSET_def;
+builtin "card" ≔ CARD;
+builtin "CARD_def" ≔ CARD_def;
+builtin "dimindex" ≔ dimindex;
+builtin "dimindex_def" ≔ dimindex_def;
 builtin "set_of_list" ≔ set_of_list;
 builtin "set_of_list_def" ≔ set_of_list_def;
 builtin "list_of_set" ≔ list_of_set;
 builtin "list_of_set_def" ≔ list_of_set_def;
-builtin "Relation_Operators.clos_trans" ≔ TC;
-builtin "TC_def" ≔ TC_def;
-
-// finite sets
-builtin "FINITE" ≔ FINITE;
-builtin "FINITE_def" ≔ FINITE_def;
-builtin "ITSET" ≔ ITSET;
-builtin "ITSET_def" ≔ ITSET_def;
-builtin "CARD" ≔ CARD;
-builtin "CARD_def" ≔ CARD_def;
-builtin "dimindex" ≔ dimindex;
-builtin "dimindex_def" ≔ dimindex_def;
 
 // finite_image
-builtin "dotdot" ≔ …;
+builtin "Ninterval" ≔ …;
 builtin "dotdot_def" ≔ …_def;
 builtin "finite_image" ≔ finite_image;
 builtin "finite_index" ≔ finite_index;
@@ -570,9 +563,9 @@ builtin "axiom_40" ≔ axiom_40;
 // topology
 builtin "Topology" ≔ Topology;
 builtin "topology" ≔ topology;
-builtin "open_in" ≔ open_in;
-builtin "axiom_47" ≔ axiom_41;
-builtin "axiom_48" ≔ axiom_42;
+builtin "open" ≔ _open;
+builtin "_mk_dest_Topology" ≔ axiom_41;
+builtin "_dest_mk_Topology" ≔ axiom_42;
 
 // Metric from Library/analysis.ml
 builtin "ismet" ≔ ismet;
@@ -620,12 +613,12 @@ builtin "V" ≔ _204638;
 builtin "V_def" ≔ _204638_def;
 builtin "Fn" ≔ _204639;
 builtin "Fn_def" ≔ _204639_def;
-builtin "nil" ≔ _204640;
+builtin "tnil" ≔ _204640;
 builtin "_204640_def" ≔ _204640_def;
-builtin "cons" ≔ _204641;
+builtin "tcons" ≔ _204641;
 builtin "_204641_def" ≔ _204641_def;
 builtin "Fn" ≔ _204757;
-builtin "Fn_def" ≔ _204757_def;
+builtin "_204757_def" ≔ _204757_def;
 builtin "V" ≔ V;
 builtin "V_def'" ≔ V_def;
 builtin "Fn" ≔ Fn;
