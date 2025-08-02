@@ -1068,7 +1068,7 @@ Definition IMAGE {A B : Type} (f : A -> B) s := [set (f x) | x in s].
 Lemma IMAGE_def {A B : Type'} : (@IMAGE A B) = (fun _32493 : A -> B => fun _32494 : A -> Prop => @GSPEC B (fun GEN_PVAR_7 : B => exists y : B, @SETSPEC B GEN_PVAR_7 (exists x : A, (@IN A x _32494) /\ (y = (_32493 x))) y)).
 Proof.
   ext 3 => f E b. unfold IMAGE,image. simpl. rewrite SPEC_elim exists2E.
-  apply prop_ext ; intros (a, (H,H')) ; rewrite -> IN_def in * ; breakgoal.
+  apply prop_ext ; intros (a, (H,H')) ; rewrite -> IN_def in * ; eauto.
 Qed.
 
 (* Variant *)
@@ -1623,7 +1623,7 @@ Section non_recursive_inductive_type.
 
   Lemma nr_mk_dest : forall a : A, (nr_mk (nr_dest a)) = a.
   Proof.
-    _mk_dest_rec. intros a a' H. now inversion H.
+    finv_inv_l. intros ? ? H. now inversion H.
   Qed.
 
   Lemma nr_dest_mk : forall r : recspace A, (forall P : recspace A -> Prop, (forall r' : recspace A, nr_pred r' -> P r') -> P r) = (nr_dest (nr_mk r) = r).

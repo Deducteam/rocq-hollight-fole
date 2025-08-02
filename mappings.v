@@ -99,40 +99,11 @@ Defined.
 HB.instance Definition _ A := is_Type' (discrete_Topology A).
 
 Definition topology {A : Type'} : ((A -> Prop) -> Prop) -> Topology A :=
-  finv (@open A). 
-
-Ltac revert_keep H :=
-  match type of H with ?T =>
-    repeat match goal with
-    | x : _ |- _ => assert_fails typecheck T x ; revert x end end.
-
-Lemma paireqE A B (x x' : A) (y y' : B) : ((x,y) = (x',y')) = (prod (x=x') (y=y')).
-Proof.
- by ext ; first inversion 1 ; last move=> [-> ->].
-Qed.
-
-Import ProofIrrelevance.
-
-Ltac instance_uniqueness := let instance1 := fresh in
-  let instance2 := fresh in
-  let eq := fresh in
-  move=> instance1 instance2 eq ;
-  destruct instance1 , instance2 ; simpl in eq ;
-  revert_keep eq ; repeat rewrite paireqE in eq ; rewrite ?eq ;
-  move=>* ; f_equal ; try apply proof_irrelevance.
-
-Ltac _mk_dest_record := let x := fresh in
-  move=> x ; apply finv_inv_l ; clear x ; try now instance_uniqueness.
-
-Ltac _dest_mk_record := let r := fresh "r" in
-  let r' := fresh in
-  move=> r ; apply finv_inv_r ;
-  [| move=> [r' <-] ; clear r ; destruct r' ;
-     simpl in * ; repeat (split ; auto) ].
+  finv (@open A).
 
 Lemma _mk_dest_Topology : forall {A : Type'} (a : Topology A), (@topology A (@open A a)) = a.
 Proof.
-  intro A. _mk_dest_record.
+  _mk_dest_record.
 Qed.
 
 Lemma andE b b' : b && b' = (b /\ b') :> Prop.
@@ -151,13 +122,10 @@ Qed.
 
 Lemma _dest_mk_Topology : forall {A : Type'} (r : (A -> Prop) -> Prop), ((fun t : (A -> Prop) -> Prop => @istopology A t) r) = ((@open A (@topology A r)) = r).
 Proof.
-  intro A. _dest_mk_record.
-  - unfold istopology ; move => [H0 [HT [HI HU]]] ;
-    unshelve eexists {|open := r |} ; auto.
-    + by rewrite -re_intersect_eq => * ; apply HI.
-    + by move => S ; rewrite -re_Union_eq ; apply HU.
-  - by rewrite re_intersect_eq ; move=> s s' [] ; auto.
-  - by move => S ; rewrite re_Union_eq ; auto.
+  _dest_mk_record.
+  - record_exists {| open := r |}.
+    by rewrite -re_Union_eq ; auto.
+  - by rewrite re_Union_eq ; auto.
 Qed.
 
 (*****************************************************************************)
@@ -218,7 +186,7 @@ Definition metric {A : Type'} := finv (@mdist A).
 
 Lemma _mk_dest_Metric : forall {A : Type'} (a : Metric A), (@metric A (@mdist A a)) = a.
 Proof.
-  intro A. _mk_dest_record.
+  _mk_dest_record.
 Qed.
 
 Definition ismet {A : Type'} : (prod A A -> R) -> Prop := fun d =>
@@ -238,35 +206,15 @@ Ltac d0 d x := (* automatically replaces all bound instances of d (x,x) with 0 a
   | lazymatch goal with H : forall x y, d (x,y) = 0%R <-> x=y |- 0%R = d (x,x) =>
       symmetry ; now apply H end].
 
-Lemma ismet_pos {A : Type'} d : ismet d -> forall x y : A, (d (x,y) >= 0)%R.
-Proof.
-  intros (H,H') x y. assert (H'' := H' x y y).
-  d0 d y. lra.
-Qed.
-
-Lemma ismet_sym {A : Type'} d : ismet d -> forall x y : A, d (x,y) = d (y,x).
-Proof.
-  intros (H,H') x y. assert (H0 := H' y x y). assert (H1 := H' x y x).
-  d0 d x. d0 d y. lra.
-Qed.
-
-Lemma ismet_tri {A : Type'} d : ismet d -> forall x y z : A, (d (x,y) <= d (x,z) + d  (z,y))%R.
-Proof.
- intros H x y z. rewrite (ismet_sym H x z). apply (proj2 H).
-Qed.
-
-Definition metric' {A : Type'} {d} (H : ismet d) : Metric A :=
-  {| mdist := d ;
-     mdist_pos := ismet_pos H ;
-     mdist_sym := ismet_sym H ;
-     mdist_refl := proj1 H ;
-     mdist_tri := ismet_tri H |}.
-
 Lemma _dest_mk_Metric : forall {A : Type'} (r : (prod A A) -> R), ((fun m : (prod A A) -> R => @ismet A m) r) = ((@mdist A (@metric A r)) = r).
 Proof.
-  intro a. _dest_mk_record.
-  - intro H. now exists (metric' H).
-  - intros x y z. rewrite (mdist_sym0 x y). apply mdist_tri0.
+  _dest_mk_record.
+  - record_exists {| mdist := r |}.
+    + specialize (H0 x y y). d0 r y. lra.
+    + assert (H1 := H0 y x y). specialize (H0 x y x). d0 r y. d0 r x. lra.
+    + assert (H1 := H0 z x z). assert (H2 := H0 x z x).
+      specialize (H0 z x y). d0 r z. d0 r x. lra.
+  - rewrite (mdist_sym0 x y). apply mdist_tri0.
 Qed.
 
 (*****************************************************************************)
@@ -436,12 +384,12 @@ Qed.
 
 Lemma _mk_dest_term : forall t, (_mk_term (_dest_term t)) = t.
 Proof.
-  _mk_dest_rec. exact (proj1 _dest_term_tl_inj).
+  finv_inv_l. exact (proj1 _dest_term_tl_inj).
 Qed.
 
 Lemma _mk_dest_list_204637 : forall l, (_mk_list_204637  (_dest_list_204637  l)) = l.
 Proof.
-  _mk_dest_rec. exact (proj2 _dest_term_tl_inj).
+  finv_inv_l. exact (proj2 _dest_term_tl_inj).
 Qed.
 
 Definition term_tl_pred term' list_204637':=
@@ -642,11 +590,11 @@ match f with
 Definition _mk_form := finv _dest_form.
 
 Lemma _mk_dest_form : forall (a : form), (_mk_form (_dest_form a)) = a.
-Proof. _mk_dest_rec. Qed.
+Proof. _mk_dest_inductive. Qed.
 
 Lemma _dest_mk_form : forall (r : recspace (prod N (list term))), ((fun a : recspace (prod N (list term)) => forall form' : (recspace (prod N (list term))) -> Prop, (forall a' : recspace (prod N (list term)), ((a' = (@CONSTR (prod N (list term)) (NUMERAL N0) (@pair N (list term) (@ε N (fun v : N => True)) (@ε (list term) (fun v : list term => True))) (fun n : N => @BOTTOM (prod N (list term))))) \/ ((exists a0 : N, exists a1 : list term, a' = ((fun a0' : N => fun a1' : list term => @CONSTR (prod N (list term)) (N.succ (NUMERAL N0)) (@pair N (list term) a0' a1') (fun n : N => @BOTTOM (prod N (list term)))) a0 a1)) \/ ((exists a0 : recspace (prod N (list term)), exists a1 : recspace (prod N (list term)), (a' = ((fun a0' : recspace (prod N (list term)) => fun a1' : recspace (prod N (list term)) => @CONSTR (prod N (list term)) (N.succ (N.succ (NUMERAL N0))) (@pair N (list term) (@ε N (fun v : N => True)) (@ε (list term) (fun v : list term => True))) (@FCONS (recspace (prod N (list term))) a0' (@FCONS (recspace (prod N (list term))) a1' (fun n : N => @BOTTOM (prod N (list term)))))) a0 a1)) /\ ((form' a0) /\ (form' a1))) \/ (exists a0 : N, exists a1 : recspace (prod N (list term)), (a' = ((fun a0' : N => fun a1' : recspace (prod N (list term)) => @CONSTR (prod N (list term)) (N.succ (N.succ (N.succ (NUMERAL N0)))) (@pair N (list term) a0' (@ε (list term) (fun v : list term => True))) (@FCONS (recspace (prod N (list term))) a1' (fun n : N => @BOTTOM (prod N (list term))))) a0 a1)) /\ (form' a1))))) -> form' a') -> form' a) r) = ((_dest_form (_mk_form r)) = r).
 Proof.
-  intro r. _dest_mk_rec.
+  intro r. _dest_mk_inductive.
   - now exists FFalse.
   - now exists (Atom x0 x1).
   - exists (FImp x3 x2). unfold _dest_form. now repeat f_equal.
@@ -1846,12 +1794,12 @@ Definition _mk_retval := finv _dest_retval.
 
 Lemma _mk_dest_retval : forall v, (_mk_retval (_dest_retval v)) = v.
 Proof.
-  _mk_dest_rec.
+  _mk_dest_inductive.
 Qed.
 
 Lemma _dest_mk_retval : forall (r : recspace Prop), ((fun a : recspace Prop => forall retval' : (recspace Prop) -> Prop, (forall a' : recspace Prop, ((a' = (@CONSTR Prop (NUMERAL N0) (@ε Prop (fun x : Prop => True)) (fun n : N => @BOTTOM Prop))) \/ ((a' = (@CONSTR Prop (N.succ (NUMERAL N0)) (@ε Prop (fun x : Prop => True)) (fun n : N => @BOTTOM Prop))) \/ (a' = (@CONSTR Prop (N.succ (N.succ (NUMERAL N0))) (@ε Prop (fun x : Prop => True)) (fun n : N => @BOTTOM Prop))))) -> retval' a') -> retval' a) r) = ((_dest_retval (_mk_retval r)) = r).
 Proof.
-  intro r. _dest_mk_rec.
+  intro r. _dest_mk_inductive.
   - now exists TT.
   - now exists FF.
   - now exists Exception.
