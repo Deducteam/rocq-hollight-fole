@@ -16,14 +16,14 @@ Set Bullet Behavior "Strict Subproofs".
 Definition LET {A B : Type} (f : A -> B) := f.
 
 Lemma LET_def {A B : Type'} : LET = (fun f : A -> B => fun x : A => f x).
-Proof. reflexivity. Qed.
+Proof erefl.
 
 Definition LET_END {A : Type} (a : A) := a.
 
 Lemma LET_END_def {A : Type'} : LET_END = (fun t : A => t).
-Proof. reflexivity. Qed.
+Proof erefl.
 
-Lemma let_clear {A B} : forall (f : A -> B) x, LET f (LET_END x) = (let y := x in f y).
+Lemma let_clear {A B} : forall (f : A -> B) x, LET (fun x => LET_END (f x)) x = (let x := x in f x).
 Proof. reflexivity. Qed.
 
 Ltac let_clear := rewrite ?let_clear.
@@ -46,7 +46,7 @@ Qed.
 Definition MEASURE {A : Type} f (x y : A) := f x < f y.
 
 Lemma MEASURE_def {A : Type'} : (@MEASURE A) = (fun _8094 : A -> N => fun x : A => fun y : A => N.lt (_8094 x) (_8094 y)).
-Proof. reflexivity. Qed.
+Proof erefl.
 
 Lemma WFP_def {_184264 : Type'} : @Acc _184264 = (fun lt2' : _184264 -> _184264 -> Prop => fun a : _184264 => forall WFP' : _184264 -> Prop, (forall a' : _184264, (forall y : _184264, (lt2' y a') -> WFP' y) -> WFP' a') -> WFP' a).
 Proof.
@@ -1288,6 +1288,8 @@ Proof.
      * f_equal. apply map_ext_Forall in IHt. rewrite (map_map _ (termsubst V)). simpl in IHt. rewrite IHt. repeat rewrite map_map. f_equal.
   *)
 
+Opaque card_eq.
+
 Equations? Prenex_right0 (f f' : form) : form by wf (size f') lt :=
   Prenex_right0 f (FAll n' f') =>
     let y := VARIANT (setU (free_variables f) (free_variables (FAll n' f')))
@@ -1299,6 +1301,7 @@ Equations? Prenex_right0 (f f' : form) : form by wf (size f') lt :=
 Proof.
   1,2 : rewrite/addn size_formsubst // ; lia.
 Qed.
+
 
 Lemma formsubst_qfree : forall f v, qfree f -> qfree (formsubst v f).
 Proof.
@@ -2001,3 +2004,4 @@ Definition TT_def' : TT = TT := erefl.
 Definition FF_def' : FF = FF := erefl.
 Definition Exception_def' : Exception = Exception := erefl.
 
+Transparent card_eq.
