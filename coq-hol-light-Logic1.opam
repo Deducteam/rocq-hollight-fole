@@ -1,16 +1,16 @@
 opam-version: "2.0"
-synopsis: "HOL-Light's logic library up to unify"
+synopsis: "HOL-Light library necessary for translating unify"
 description: """
-This library contains an automatic translation in Rocq of the HOL-Light
-Logic library using https://github.com/Deducteam/hol2dk.
+This library contains an automatic translation in Rocq of a part of the
+HOL-Light Logic library using https://github.com/Deducteam/hol2dk.
 """
-homepage: "https://github.com/agontard/coq-hol-light-Logic1"
-dev-repo: "git+https://github.com/agontard/coq-hol-light-Logic1.git"
-bug-reports: "https://github.com/agontard/coq-hol-light-Logic1/issues"
-doc: "https://github.com/agontard/coq-hol-light-Logic1"
-maintainer: "antoine.gontard@free.fr"
-authors: ["Antoine GONTARD"]
-license: "None"
+homepage: "https://github.com/Deducteam/coq-hol-light-Logic1"
+dev-repo: "git+https://github.com/Deducteam/coq-hol-light-Logic1.git"
+bug-reports: "https://github.com/Deducteam/coq-hol-light-Logic1/issues"
+doc: "https://github.com/Deducteam/coq-hol-light-Logic1"
+maintainer: "antoine.gontard@inria.fr"
+authors: ["Antoine Gontard"]
+license: "CeCILL-2.1"
 depends: [
   "rocq-prover" {>= "9.0"}
   "coq-mathcomp-classical" {>= "1.8.0"}
@@ -20,7 +20,7 @@ depends: [
 build: [make "-j%{jobs}%"]
 install: [make "install"]
 tags: [
-  "logpath:HOLLight_Logic"
+  "logpath:HOLLight_Logic1"
   "date:2025-05-16"
   "keyword:HOL-Light"
   "keyword:first order logic"
