@@ -1,8 +1,9 @@
-Require Import HOLLight_Logic1.mappings_coq_hol_light.
-Import type classical_sets mappings ssreflect eqtype choice ssrnat ssrfun ssrbool boolp HB.structures.
-Require Import Stdlib.NArith.BinNat.
-Require Import Stdlib.Reals.Reals.
+From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat choice.
+From mathcomp Require Import boolp classical_sets cardinality.
+From Stdlib Require Import NArith.BinNat Reals.Reals Lists.List Lra.
 From Equations Require Import Equations.
+Require Import HOLLight_Real_With_N.mappings HB.structures.
+Require Import HOLLight_Logic1.mappings_coq_hol_light.
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -157,7 +158,6 @@ Proof.
   destruct (R1_neq_R0 F). contradiction.
 Qed.
 
-Require Import Lra.
 Lemma discr_tri A : forall x y z,
   (discrete_metric A (x,y) <= discrete_metric A (x,z) + discrete_metric A (z,y))%R.
 Proof.
@@ -224,7 +224,6 @@ Qed.
 Lemma empty_mempty_domain {A : Type} : (fun _ : A => 0 <> 0) = set0.
 Proof. ext ; easy. Qed.
 
-Import cardinality.
 Definition is_fmultiset {A : Type'} : (A -> N) -> Prop :=
   fun f => @finite_set A (@GSPEC A (fun GEN_PVAR_433 : A => exists a : A, @SETSPEC A GEN_PVAR_433 (~ ((f a) = (NUMERAL N0))) a)).
 
@@ -281,8 +280,6 @@ Proof. reflexivity. Qed.
 (*****************************************************************************)
 (* Aligning the type of first order terms *)
 (*****************************************************************************)
-
-Require Import Stdlib.Lists.List.
 
 Unset Elimination Schemes.
 Inductive term : Set := V (_ : N) | Fn (_ : N) (_ : list term).
@@ -1299,7 +1296,7 @@ Equations? Prenex_right0 (f f' : form) : form by wf (size f') lt :=
     in FEx y (Prenex_right0 f (formsubst (valmod (n' , V y) V) f'));
   Prenex_right0 f qfree => FImp f qfree.
 Proof.
-  1,2 : rewrite/addn size_formsubst // ; lia.
+  1,2 : by rewrite size_formsubst //= /lt leP** ; elim:(size f').
 Qed.
 
 
@@ -1357,7 +1354,7 @@ Equations? Prenex_left0 (f f' : form) : form by wf (size f) lt :=
     in FAll y (Prenex_left0 (formsubst (valmod (n , V y) V) f) f');
   Prenex_left0 f f' => Prenex_right0 f f'.
 Proof.
-    1,2 : rewrite/addn size_formsubst // ; lia.
+  1,2 : by rewrite size_formsubst //= /lt leP** ; elim:(size f).
 Qed.
 
 Equations? Prenex_left1 (f f' : form) : form by wf (size f) lt :=
@@ -1369,7 +1366,7 @@ Equations? Prenex_left1 (f f' : form) : form by wf (size f) lt :=
     in FAll y (Prenex_left1 (formsubst (valmod (n , V y) V) f) f');
   Prenex_left1 f f' => Prenex_right f f'.
 Proof.
-  1,2 : rewrite/addn size_formsubst // ; lia.
+  1,2 : by rewrite size_formsubst //= /lt leP** ; elim:(size f).
 Qed.
 
 Lemma Prenex_left0_prenex : forall f f', prenex f -> prenex f' -> prenex (Prenex_left0 f f').
@@ -1440,7 +1437,8 @@ Skolems n (FAll m f) k => FAll m (Skolems n f k);
 Skolems n (FImp (FAll m (FImp f FFalse)) FFalse) k => Skolems n (Skolem1 (NUMPAIR n k) m f) (N.succ k);
 Skolems _ f _ => f.
 Proof.
-  rewrite/addn/Skolem1 size_formsubst // ; lia.
+  by rewrite/Skolem1 size_formsubst  /lt leP** /= ; elim:(size f).
+  by [].
 Qed.
 
 Lemma Skolems_def : Skolems = (@ε ((prod N (prod N (prod N (prod N (prod N (prod N N)))))) -> N -> form -> N -> form) (fun Skolems' : (prod N (prod N (prod N (prod N (prod N (prod N N)))))) -> N -> form -> N -> form => forall _221561 : prod N (prod N (prod N (prod N (prod N (prod N N))))), forall J : N, forall r : form, forall k : N, (Skolems' _221561 J r k) = (@PPAT form (fun x : N => fun q : form => FAll x (Skolems' _221561 J q k)) (fun x : N => fun q : form => Skolems' _221561 J (Skolem1 (NUMPAIR J k) x q) (N.succ k)) (fun p : form => p) r)) (@pair N (prod N (prod N (prod N (prod N (prod N N))))) (NUMERAL (BIT1 (BIT1 (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N N)))) (NUMERAL (BIT1 (BIT1 (BIT0 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N N))) (NUMERAL (BIT1 (BIT1 (BIT1 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N N)) (NUMERAL (BIT0 (BIT0 (BIT1 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N N) (NUMERAL (BIT1 (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N N (NUMERAL (BIT1 (BIT0 (BIT1 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (NUMERAL (BIT1 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 N0))))))))))))))).
