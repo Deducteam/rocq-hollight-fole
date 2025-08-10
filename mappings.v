@@ -335,11 +335,6 @@ Definition term_ind : forall (P : term -> Prop),
        forall t, P t :=
   (fun P Hv HFn => term_ind_full P (Forall P) Hv HFn (Forall_nil _) (Forall_cons (P := P))).
 
-Ltac Forall_induction t :=
-  revert t ; match goal with
-  |- forall t, ?P => apply (term_ind (fun t => P)) ;
-    [ intros ?n | intros ?n ?l ?IHt ] end.
-
 Definition term_rec (P : term -> Set) (Q : list term -> Set) := term_rect P Q.
 
 Set Implicit Arguments.
@@ -370,10 +365,10 @@ Lemma _dest_term_tl_inj : (forall t t', _dest_term t = _dest_term t' -> t = t')
 Proof.
   apply term_tl_ind.
   intros n t. induction t;simpl;inversion 1. reflexivity.
-  - induction l ; intros H t' ; Forall_induction t' ; simpl ; inversion 1. 
+  - induction l ; intros H t' ; induction t' using term_ind ; simpl ; inversion 1.
     induction l. 3 : induction l0. reflexivity.
-    1,2 : rewrite FCONS_inj in H3 ; destruct H3 as (H3 , _) ; inversion H3.
-    f_equal. apply H. now rewrite FCONS_inj in H3.
+    1,2 : rewrite FCONS_inj in H4 ; destruct H4 as (H4 , _) ; inversion H4.
+    f_equal. apply H. now rewrite FCONS_inj in H4.
   - induction l'. reflexivity. simpl. inversion 1.
   - induction l'; simpl ; inversion 1. do 2 rewrite FCONS_inj in H3. f_equal.
     now apply H. now apply H0.
@@ -477,91 +472,14 @@ Qed.
 (* tactics to align recursive functions on terms *)
 (*****************************************************************************)
 
-(* identical to total_align, but specifically for functions
-   where the recursive call is done through List.map on terms *)
+Ltac Forall_induction t := induction t using term_ind.
 
-Ltac term_align1 :=
-  align_ε ; [ repeat split ; intros ; auto
-  | let f' := fresh in
-    let t := fresh in
-    let HV := fresh in
-    let HFn := fresh in
-    let HV' := fresh in
-    let HFn' := fresh in
-    intros f' (HV, HFn) (HV', HFn');
-    ext 1=> t ; Forall_induction t ; extall ;
-    [ now rewrite HV HV'
-    | rewrite HFn HFn' ; repeat (f_equal ; try now apply map_ext_Forall) ]].
-
-Ltac term_align2 :=
-  align_ε ; [ repeat split ; intros ; auto
-  | let f' := fresh in
-    let t := fresh in
-    let a := fresh in
-    let HV := fresh in
-    let HFn := fresh in
-    let HV' := fresh in
-    let HFn' := fresh in
-    intros f' (HV, HFn) (HV', HFn');
-    ext 2 => a t ; revert a ; Forall_induction t => a ; extall ;
-    [ now rewrite HV HV'
-    | rewrite HFn HFn' ; repeat (f_equal ; try now apply map_ext_Forall) ]].
-
-Ltac term_align3 :=
-  align_ε ; [ repeat split ; intros ; auto
-  | let f' := fresh in
-    let t := fresh in
-    let a := fresh in
-    let b := fresh in
-    let HV := fresh in
-    let HFn := fresh in
-    let HV' := fresh in
-    let HFn' := fresh in
-    intros f' (HV, HFn) (HV', HFn');
-    ext 3 => a b t ; revert a b ; Forall_induction t=> a b ; extall ;
-    [ now rewrite HV HV'
-    | rewrite HFn HFn' ; repeat (f_equal ; try now apply map_ext_Forall) ]].
-
-Ltac term_align4 :=
-  align_ε ; [ repeat split ; intros ; auto
-  | let f' := fresh in
-    let t := fresh in
-    let a := fresh in
-    let b := fresh in
-    let c := fresh in
-    let HV := fresh in
-    let HFn := fresh in
-    let HV' := fresh in
-    let HFn' := fresh in
-    intros f' (HV, HFn) (HV', HFn');
-    ext 4 => a b c t ; revert a b c ; Forall_induction t => a b c ; extall ;
-    [ now rewrite HV HV'
-    | rewrite HFn HFn' ; repeat (f_equal ; try now apply map_ext_Forall) ]].
-
-Ltac term_align5 :=
-  align_ε ; [ repeat split ; intros ; auto
-  | let f' := fresh in
-    let t := fresh in
-    let a := fresh in
-    let b := fresh in
-    let c := fresh in
-    let d := fresh in
-    let HV := fresh in
-    let HFn := fresh in
-    let HV' := fresh in
-    let HFn' := fresh in
-    intros f' (HV, HFn) (HV', HFn');
-    ext 5 => a b c d t ; revert a b c d ;
-    Forall_induction t => a b c d ; extall ;
-    [ now rewrite HV HV'
-    | rewrite HFn HFn' ; repeat (f_equal ; try now apply map_ext_Forall) ]].
-
-Ltac term_align :=
-  try term_align1 ;
-  try term_align2 ;
-  try term_align3 ;
-  try term_align4 ;
-  try term_align5.
+Ltac term_align1 := total_align1_general Forall_induction solve_total_align_with_lists.
+Ltac term_align2 := total_align2_general Forall_induction solve_total_align_with_lists.
+Ltac term_align3 := total_align3_general Forall_induction solve_total_align_with_lists.
+Ltac term_align4 := total_align4_general Forall_induction solve_total_align_with_lists.
+Ltac term_align5 := total_align5_general Forall_induction solve_total_align_with_lists.
+Ltac term_align := total_align_general Forall_induction solve_total_align_with_lists.
 
 (*****************************************************************************)
 (* first order formulae *)
@@ -647,7 +565,7 @@ Fixpoint functions_term t : (prod N N) -> Prop :=
   | Fn n l => (n , lengthN l) |` (list_Union (map (functions_term) l)) end.
 
 Lemma functions_term_def : functions_term = (@ε ((prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))))))))) -> term -> (prod N N) -> Prop) (fun functions_term' : (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))))))))) -> term -> (prod N N) -> Prop => forall _204968 : prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N)))))))))))), (forall v : N, (functions_term' _204968 (V v)) = (@set0 (prod N N))) /\ (forall f : N, forall l : list term, (functions_term' _204968 (Fn f l)) = (@INSERT (prod N N) (@pair N N f (@lengthN term l)) (@list_Union (prod N N) (@List.map term ((prod N N) -> Prop) (functions_term' _204968) l))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N)))))))))))) (NUMERAL (BIT0 (BIT1 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))))))) (NUMERAL (BIT1 (BIT0 (BIT1 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N)))))))))) (NUMERAL (BIT0 (BIT1 (BIT1 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))))) (NUMERAL (BIT1 (BIT1 (BIT0 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N)))))))) (NUMERAL (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N (prod N N))))))) (NUMERAL (BIT1 (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N (prod N N)))))) (NUMERAL (BIT1 (BIT1 (BIT1 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N (prod N N))))) (NUMERAL (BIT0 (BIT1 (BIT1 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N (prod N N)))) (NUMERAL (BIT1 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N (prod N (prod N N))) (NUMERAL (BIT1 (BIT1 (BIT1 (BIT1 (BIT1 (BIT0 (BIT1 N0)))))))) (@pair N (prod N (prod N N)) (NUMERAL (BIT0 (BIT0 (BIT1 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))) (@pair N (prod N N) (NUMERAL (BIT1 (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 N0)))))))) (@pair N N (NUMERAL (BIT0 (BIT1 (BIT0 (BIT0 (BIT1 (BIT1 (BIT1 N0)))))))) (NUMERAL (BIT1 (BIT0 (BIT1 (BIT1 (BIT0 (BIT1 (BIT1 N0)))))))))))))))))))))).
-Proof. term_align. Qed.
+Proof. term_align1. Qed.
 
 Fixpoint functions_form f : (prod N N) -> Prop :=
   match f with
