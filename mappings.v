@@ -41,7 +41,7 @@ Qed.
 
 Lemma TC_def {A : Type'} : (@Relation_Operators.clos_trans A) = (fun R' : A -> A -> Prop => fun a0 : A => fun a1 : A => forall TC' : A -> A -> Prop, (forall a0' : A, forall a1' : A, ((R' a0' a1') \/ (exists y : A, (TC' a0' y) /\ (TC' y a1'))) -> TC' a0' a1') -> TC' a0 a1).
 Proof.
-  ext 1=> R. ind_align. now apply (Relation_Operators.t_trans _ _ _ x0).
+  ind_align. now apply (Relation_Operators.t_trans _ _ _ x0).
 Qed.
 
 Definition MEASURE {A : Type} f (x y : A) := f x < f y.
@@ -50,9 +50,7 @@ Lemma MEASURE_def {A : Type'} : (@MEASURE A) = (fun _8094 : A -> N => fun x : A 
 Proof erefl.
 
 Lemma WFP_def {_184264 : Type'} : @Acc _184264 = (fun lt2' : _184264 -> _184264 -> Prop => fun a : _184264 => forall WFP' : _184264 -> Prop, (forall a' : _184264, (forall y : _184264, (lt2' y a') -> WFP' y) -> WFP' a') -> WFP' a).
-Proof.
-  ext 1 => R. ind_align.
-Qed.
+Proof. ind_align. Qed.
 
 (*****************************************************************************)
 (* Topologies (Libraries/analysis.ml) *)
