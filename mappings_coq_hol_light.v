@@ -1129,7 +1129,6 @@ Proof.
     by rewrite II0 card_eq0 => /eqP-> ; left.
     right ; exist a (s `\ a) ; split ; first by rewrite setD1K.
     exact (H' _ (IHn _ s_min_a)).
-  - exact (finite_set0 _).
   - by rewrite finite_setU.
 Qed.
 
@@ -1138,7 +1137,7 @@ Inductive finite' (A : Type) : set A -> Prop :=
 |finite'_set0 : finite' set0
 |finite'_setU1 s a : finite' s -> finite' (a |` s).
 
-Lemma finite_as_ind (A : Type') : finite_set = @finite' A.
+Lemma finite_setE (A : Type') : finite_set = @finite' A.
 Proof. by symmetry ; rewrite FINITE_def ; ind_align. Qed.
 
 (* Version using lists *)
@@ -1196,7 +1195,7 @@ Notation "[ 'list' 'of' s ]" := (list_of_set s) (format "[ 'list'  'of'  s ]") :
 Lemma list_of_set_spec (A:Type') (s : set A) (H : finite_set s):
   [set` [list of s]] = s /\ NoDup (list_of_set s).
 Proof.
-  rewrite finite_as_ind in H ; rewrite/list_of_set.
+  rewrite finite_setE in H ; rewrite/list_of_set.
   match goal with [|- [set` (ε ?Q)] = _ /\ _] => have ex : exists l, Q l end.
   - elim : {s}H => [|s a _ [l [<- ndl]]] ; first (exists nil ; is_True (@NoDup_nil A)).
     by rewrite set_nil.
@@ -1286,8 +1285,8 @@ Proof.
       * right. now rewrite In_list_of_set.
       * left. now symmetry.
       * right. now rewrite <- In_list_of_set.
-      * rewrite -> finite_as_ind in *. now apply finite'_setU1.
-    + apply list_of_set_spec. rewrite -> finite_as_ind in *. now apply finite'_setU1.
+      * rewrite -> finite_setE in *. now apply finite'_setU1.
+    + apply list_of_set_spec. rewrite -> finite_setE in *. now apply finite'_setU1.
     + apply NoDup_cons. now rewrite In_list_of_set.
       now apply list_of_set_spec.
 Qed.
@@ -1320,7 +1319,7 @@ Proof.
   - split. now rewrite list_of_set0. intros a E H'. unfold INSERT.
     destruct (list_of_setU1 a H') as (l, (Hl, ->)). ssimpl. if_intro=>H.
     reflexivity. now rewrite (permut_inv_fold_right Hl).
-  - rewrite finite_as_ind. intros f' (HEmpty,HINSERT) (HEmpty', HINSERT') E (_, Hfin).
+  - rewrite finite_setE. intros f' (HEmpty,HINSERT) (HEmpty', HINSERT') E (_, Hfin).
     induction Hfin. now rewrite HEmpty HEmpty'.
     unfold INSERT in *. now rewrite -> HINSERT, HINSERT', IHHfin.
 Qed.
