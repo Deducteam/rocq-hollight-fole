@@ -508,9 +508,6 @@ Proof.
   - now exists (Atom x0 x1).
   - exists (FImp x3 x2). unfold _dest_form. now repeat f_equal.
   - exists (FAll x0 x2). unfold _dest_form. now repeat f_equal.
-  - do 2 right. left. exists (_dest_form x0_1). exists (_dest_form x0_2).
-    repeat split;auto. now apply IHx0_1. now apply IHx0_2.
-  - do 3 right. exists n. exists (_dest_form x0). split. reflexivity. now apply IHx0.
 Qed.
 
 Lemma FFalse_def : FFalse = (_mk_form (@CONSTR (prod N (list term)) (NUMERAL N0) (@pair N (list term) (@ε N (fun v : N => True)) (@ε (list term) (fun v : list term => True))) (fun n : N => @BOTTOM (prod N (list term))))).
