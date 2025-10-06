@@ -1,5 +1,5 @@
-Require Import Stdlib.NArith.BinNat Stdlib.Reals.Reals mathcomp.classical.classical_sets mathcomp.classical.cardinality mathcomp.ssreflect.choice mathcomp.ssreflect.ssrbool HOLLight_Real_With_N.mappings HOLLight_Logic1.mappings_coq_hol_light HOLLight_Logic1.mappings.
-Require Import HOLLight_Logic1.terms.
+Require Import Stdlib.NArith.BinNat Stdlib.Reals.Reals mathcomp.classical.classical_sets mathcomp.classical.cardinality mathcomp.ssreflect.choice mathcomp.ssreflect.ssrbool MathComp_HOLLight_Real_With_N.mappings HOLLight_Logic1.mappings.
+Require Import HOLLight_Logic1.make_terms.
 Axiom thm_T_DEF : True = ((fun p : Prop => p) = (fun p : Prop => p)).
 Axiom thm_AND_DEF : and = (fun p : Prop => fun q : Prop => (fun f : Prop -> Prop -> Prop => f p q) = (fun f : Prop -> Prop -> Prop => f True True)).
 Axiom thm_IMP_DEF : imp = (fun p : Prop => fun q : Prop => (p /\ q) = p).

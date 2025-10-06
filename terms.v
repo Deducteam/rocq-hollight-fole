@@ -1,4 +1,4 @@
-Require Import Stdlib.NArith.BinNat Stdlib.Reals.Reals mathcomp.classical.classical_sets mathcomp.classical.cardinality mathcomp.ssreflect.choice mathcomp.ssreflect.ssrbool HOLLight_Real_With_N.mappings HOLLight_Logic1.mappings_coq_hol_light HOLLight_Logic1.mappings.
+Require Import Stdlib.NArith.BinNat Stdlib.Reals.Reals mathcomp.classical.classical_sets mathcomp.classical.cardinality mathcomp.ssreflect.choice mathcomp.ssreflect.ssrbool MathComp_HOLLight_Real_With_N.mappings HOLLight_Logic1.mappings.
 Definition o {A B C : Type'} : (B -> C) -> (A -> B) -> A -> C := fun f : B -> C => fun g : A -> B => fun x : A => f (g x).
 Lemma o_def {A B C : Type'} : (@o A B C) = (fun f : B -> C => fun g : A -> B => fun x : A => f (g x)).
 Proof. exact (REFL (@o A B C)). Qed.

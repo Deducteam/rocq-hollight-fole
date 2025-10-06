@@ -1,0 +1,2 @@
+#!/bin/sh
+hol2dk config Logic/make.ml HOLLight_Logic1 Stdlib.NArith.BinNat Stdlib.Reals.Reals mathcomp.classical.classical_sets mathcomp.classical.cardinality mathcomp.ssreflect.choice mathcomp.ssreflect.ssrbool MathComp_HOLLight_Real_With_N.mappings /home/agontard/Logic/mappings.v /home/agontard/Logic/mappings.lp
