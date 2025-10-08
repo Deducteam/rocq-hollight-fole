@@ -14,8 +14,9 @@ license: "CeCILL-2.1"
 depends: [
   "rocq-prover" {>= "9.0"}
   "coq-mathcomp-classical" {>= "1.8.0"}
-  "coq-hol-light-real-with-N" {>= "2.0.0"}
   "coq-fourcolor-reals" {>= "1.4.0"}
+  "rocq-mathcomp-hollight-real-with-N" {>= "0.0.0"}
+  "rocq-equations" {>= "1.3.1+9.0"}
 ]
 build: [make "-j%{jobs}%"]
 install: [make "install"]
