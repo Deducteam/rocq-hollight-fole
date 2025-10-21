@@ -33,7 +33,8 @@ line() { echo '------------------------------------------------------------'; }
 
 start() {
     line
-    echo STAGE `head -n1 STAGE`: $* ...
+    if test -f STAGE; then i=`head -n1 STAGE`; else i=1; fi
+    echo STAGE $i: $* ...
 }
 
 mkdir -p tmp
