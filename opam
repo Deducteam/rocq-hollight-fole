@@ -21,8 +21,8 @@ depends: [
 build: [make "-j%{jobs}%"]
 install: [make "install"]
 tags: [
-  "logpath:HOLLight_Logic1"
-  "date:2025-05-16"
+  "logpath:HOLLight_Logic_fole"
+  "date:2025-10-16"
   "keyword:HOL-Light"
   "keyword:first order logic"
 ]

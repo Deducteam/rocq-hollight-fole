@@ -1927,7 +1927,7 @@ Set Elimination Schemes.
 
 HB.instance Definition _ := is_Type' (V 0).
 
-Definition list_204637 := list term.
+Definition list term := list term.
 
 Unset Implicit Arguments.
 
@@ -1991,17 +1991,17 @@ Fixpoint _dest_term t : recspace N :=
     in CONSTR 1 n [_dest_tl l]_rec
   end.
 
-Fixpoint _dest_list_204637 l : recspace N :=
+Fixpoint _dest_tlist l : recspace N :=
   match l with
   | nil => CONSTR 2 (ε (fun _ => True)) []_rec
   | cons t l => CONSTR 3 (ε (fun _ => True))
-    [_dest_term t ; _dest_list_204637 l]_rec end.
+    [_dest_term t ; _dest_tlist l]_rec end.
 
-Definition _mk_term :=finv _dest_term.
-Definition _mk_list_204637 := finv _dest_list_204637.
+Definition _mk_term := finv _dest_term.
+Definition _mk_tlist := finv _dest_tlist.
 
 Lemma _dest_term_tl_inj : (forall t t', _dest_term t = _dest_term t' -> t = t')
-  /\ (forall l l', _dest_list_204637 l = _dest_list_204637 l' -> l = l').
+  /\ (forall l l', _dest_tlist l = _dest_tlist l' -> l = l').
 Proof.
   apply term_tl_ind.
   intros n t. induction t;simpl;inversion 1. reflexivity.
@@ -2019,37 +2019,37 @@ Proof.
   finv_inv_l. exact (proj1 _dest_term_tl_inj).
 Qed.
 
-Lemma _mk_dest_list_204637 : forall l, (_mk_list_204637  (_dest_list_204637  l)) = l.
+Lemma _mk_dest_tlist : forall l, (_mk_tlist  (_dest_tlist  l)) = l.
 Proof.
   finv_inv_l. exact (proj2 _dest_term_tl_inj).
 Qed.
 
-Definition term_tl_pred term' list_204637':=
+Definition term_tl_pred term' tlist' :=
     ((forall a0' : recspace N, 
       ((exists a : N, a0' = ((fun a' : N => @CONSTR N (NUMERAL N0) a' (fun n : N => @BOTTOM N)) a)) \/ 
         (exists a0 : N, exists a1 : recspace N, (a0' = ((fun a0'' : N => fun a1' : recspace N => 
           @CONSTR N (N.succ (NUMERAL N0)) a0'' (@FCONS (recspace N) a1' (fun n : N => @BOTTOM N))) a0 a1)) /\ 
-            (list_204637' a1))) -> term' a0') /\ 
+            (tlist' a1))) -> term' a0') /\ 
               (forall a1' : recspace N, ((a1' = (@CONSTR N (N.succ (N.succ (NUMERAL N0))) 
               (@ε N (fun v : N => True)) (fun n : N => @BOTTOM N))) \/ 
                 (exists a0 : recspace N, exists a1 : recspace N, 
                 (a1' = ((fun a0'' : recspace N => fun a1'' : recspace N => 
                 @CONSTR N (N.succ (N.succ (N.succ (NUMERAL N0)))) (@ε N (fun v : N => True)) 
                 (@FCONS (recspace N) a0'' (@FCONS (recspace N) a1'' (fun n : N => @BOTTOM N)))) a0 a1)) /\ 
-                  ((term' a0) /\ (list_204637' a1)))) -> list_204637' a1')).
+                  ((term' a0) /\ (tlist' a1)))) -> tlist' a1')).
 
 Lemma _dest_mk_term_tl0 : forall P P' : recspace N -> Prop, term_tl_pred P P' ->
-  (forall t, P (_dest_term t)) /\ forall l, P' (_dest_list_204637 l).
+  (forall t, P (_dest_term t)) /\ forall l, P' (_dest_tlist l).
 Proof.
   intros P P' H. apply term_tl_ind.
   - intro n. apply H. left. now exists n.
-  - intros n l IHl. apply H. right. exists n. now exists (_dest_list_204637 l).
+  - intros n l IHl. apply H. right. exists n. now exists (_dest_tlist l).
   - apply H. now left.
-  - intros t l IHt IHl. apply H. right. exists (_dest_term t). now exists (_dest_list_204637 l).
+  - intros t l IHt IHl. apply H. right. exists (_dest_term t). now exists (_dest_tlist l).
 Qed.
 
-Lemma _dest_mk_list_204637 : forall r, (fun r' => forall P P', term_tl_pred P P' -> P' r') r =
-  (_dest_list_204637 (_mk_list_204637 r) = r).
+Lemma _dest_mk_tlist : forall r, (fun r' => forall P P', term_tl_pred P P' -> P' r') r =
+  (_dest_tlist (_mk_tlist r) = r).
 Proof.
   intro r.
   let H := fresh in
@@ -2074,7 +2074,7 @@ Proof.
   let H := fresh in
   let x := fresh "x" in
   apply finv_inv_r ; intro H ;
-  [ apply (H (fun y => exists x, _dest_term x = y) (fun y => exists x, _dest_list_204637 x = y)) ;
+  [ apply (H (fun y => exists x, _dest_term x = y) (fun y => exists x, _dest_tlist x = y)) ;
     clear H ; split ; intros x H ;
     firstorder ; rewrite H ;
     clear H ; simpl in *
@@ -2089,19 +2089,19 @@ Qed.
 Lemma V_def : V = (fun a : N => _mk_term ((fun a' : N => @CONSTR N (NUMERAL N0) a' (fun n : N => @BOTTOM N)) a)).
 Proof. constr_align _mk_dest_term. Qed.
 
-Lemma Fn_def : Fn = (fun a0 : N => fun a1 : list_204637 => _mk_term ((fun a0' : N => fun a1' : recspace N => @CONSTR N (N.succ (NUMERAL N0)) a0' (@FCONS (recspace N) a1' (fun n : N => @BOTTOM N))) a0 (_dest_list_204637 a1))).
+Lemma Fn_def_internal : Fn = (fun a0 : N => fun a1 : list term => _mk_term ((fun a0' : N => fun a1' : recspace N => @CONSTR N (N.succ (NUMERAL N0)) a0' (@FCONS (recspace N) a1' (fun n : N => @BOTTOM N))) a0 (_dest_tlist a1))).
 Proof. constr_align _mk_dest_term. Qed.
 
 Definition tnil : list term := nil.
-Lemma _204640_def : tnil = (_mk_list_204637 (@CONSTR N (N.succ (N.succ (NUMERAL N0))) (@ε N (fun v : N => True)) (fun n : N => @BOTTOM N))).
-Proof. constr_align _mk_dest_list_204637. Qed.
+Lemma tnil_def : tnil = (_mk_tlist (@CONSTR N (N.succ (N.succ (NUMERAL N0))) (@ε N (fun v : N => True)) (fun n : N => @BOTTOM N))).
+Proof. constr_align _mk_dest_tlist. Qed.
 
 Definition tcons : term -> _ := cons.
 
-Lemma _204641_def : tcons = (fun a0 : term => fun a1 : list_204637 => _mk_list_204637 ((fun a0' : recspace N => fun a1' : recspace N => @CONSTR N (N.succ (N.succ (N.succ (NUMERAL N0)))) (@ε N (fun v : N => True)) (@FCONS (recspace N) a0' (@FCONS (recspace N) a1' (fun n : N => @BOTTOM N)))) (_dest_term a0) (_dest_list_204637 a1))).
-Proof. constr_align _mk_dest_list_204637. Qed.
+Lemma tcons_def : tcons = (fun a0 : term => fun a1 : list term => _mk_tlist ((fun a0' : recspace N => fun a1' : recspace N => @CONSTR N (N.succ (N.succ (N.succ (NUMERAL N0)))) (@ε N (fun v : N => True)) (@FCONS (recspace N) a0' (@FCONS (recspace N) a1' (fun n : N => @BOTTOM N)))) (_dest_term a0) (_dest_tlist a1))).
+Proof. constr_align _mk_dest_tlist. Qed.
 
-Lemma _204757_def : Fn = (fun a0 : N => fun a1 : list term => Fn a0 (@ε ((list term) -> list_204637) (fun fn : (list term) -> list_204637 => ((fn (@nil term)) = tnil) /\ (forall a0' : term, forall a1' : list term, (fn (@cons term a0' a1')) = (tcons a0' (fn a1')))) a1)).
+Lemma Fn_def : Fn = (fun a0 : N => fun a1 : list term => Fn a0 (@ε ((list term) -> list term) (fun fn : (list term) -> list term => ((fn (@nil term)) = tnil) /\ (forall a0' : term, forall a1' : list term, (fn (@cons term a0' a1')) = (tcons a0' (fn a1')))) a1)).
 Proof.
   ext=> t l. f_equal. apply (ext_fun (f := (fun l => l))). align_ε. auto.
   simpl. intros f' H H'. full_destruct. clear l. ext=> l. induction l ; auto.

@@ -1,6 +1,16 @@
-# coq-hol-light-Logic1
-Translation of the HOL-Light [Logic library](https://github.com/jrh13/hol-light/tree/master/Logic) using [hol2dk](https://github.com/Deducteam/hol2dk).
+This repository contains a [Rocq](https://coq.inria.fr/) library that is an automatic translation of some part of the [HOL-Light](https://github.com/jrh13/hol-light) library on [Logic](https://github.com/jrh13/hol-light/blob/master/Logic/make.ml), obtained with [hol2dk](https://github.com/Deducteam/hol2dk) and [lambdapi](https://github.com/Deducteam/lambdapi), and used to translate the full library with HOL-Light types and functions mapped to idiomatic types and functions in Rocq. Find more details in the [translation](https://github.com/Deducteam/coq-hol-light-Logic2) of the full library.
 
-mappings only go up to (and not including) unify. The full library will be available as coq-hol-light-Logic2 and use results from this translation to define unify
+Remark: The translated theorems are provided as axioms in order to have a fast Require because the proofs currently extracted from HOL-Light can be very big (several Gb) and not very informative for they are low level (the translation is done at the kernel level, not at the source level). If you are skeptical, you can however generate and check them again by using the script [reproduce](https://github.com/Deducteam/coq-hol-light-Logic1/blob/main/reproduce). It however takes about 1 hour and 45 minutes with 32 processors Intel Core i9-13950HX and 64 Gb RAM. If every thing works well, the proofs will be in the directory `tmp/output`.
 
-Currently depending on https://github.com/agontard/coq-hol-light-real-with-N/tree/with_mathcomp for mathcomp integration, and temporarily provides its own updated version of the mappings of the [coq-hol-light](https://github.com/Deducteam/coq-hol-light) library to adapt to this integration and map set theory to mathcomp-classical set theory.
+**Installation using [opam](https://opam.ocaml.org/)**
+
+```
+opam repo add rocq-released https://rocq-prover.org/opam/released
+opam install mathcomp-hollight-fole
+```
+
+**Usage in a Rocq file**
+
+```
+Require Import HOLLight_Logic_fole.theorems.
+```
