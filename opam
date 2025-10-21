@@ -4,10 +4,10 @@ description: """
 This library contains an automatic translation in Rocq of a part of the
 HOL-Light Logic library using https://github.com/Deducteam/hol2dk.
 """
-homepage: "https://github.com/Deducteam/coq-hol-light-Logic1"
-dev-repo: "git+https://github.com/Deducteam/coq-hol-light-Logic1.git"
-bug-reports: "https://github.com/Deducteam/coq-hol-light-Logic1/issues"
-doc: "https://github.com/Deducteam/coq-hol-light-Logic1"
+homepage: "https://github.com/Deducteam/rocq-hollight-fole"
+dev-repo: "git+https://github.com/Deducteam/rocq-hollight-fole.git"
+bug-reports: "https://github.com/Deducteam/rocq-hollight-fole/issues"
+doc: "https://github.com/Deducteam/rocq-hollight-fole"
 maintainer: "antoine.gontard@inria.fr"
 authors: ["Antoine Gontard"]
 license: "CeCILL-2.1"
