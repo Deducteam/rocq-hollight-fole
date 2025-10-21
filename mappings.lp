@@ -621,7 +621,7 @@ builtin "V_def'" ≔ V_def;
 builtin "Fn" ≔ Fn;
 builtin "Fn_def'" ≔ Fn_def;
 
-//formulae
+// formulae
 builtin "form" ≔ form;
 builtin "_dest_form" ≔ _dest_form;
 builtin "_mk_form" ≔ _mk_form;
