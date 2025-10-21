@@ -597,7 +597,7 @@ builtin "morder_def" ≔ morder_def;
 
 // terms
 builtin "term" ≔ term;
-builtin "list term" ≔ list_204628;
+builtin "(list term)" ≔ list_204628;
 builtin "_mk_tlist" ≔ _mk_list_204628;
 builtin "_dest_tlist" ≔ _dest_list_204628;
 builtin "_mk_term" ≔ _mk_term;
