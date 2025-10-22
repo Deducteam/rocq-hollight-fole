@@ -6,7 +6,7 @@ Remark: The translated theorems are provided as axioms in order to have a fast R
 
 ```
 opam repo add rocq-released https://rocq-prover.org/opam/released
-opam install mathcomp-hollight-fole
+opam install rocq-hollight-fole
 ```
 
 **Usage in a Rocq file**
