@@ -4,10 +4,10 @@ description: """
 This library contains an automatic translation in Rocq of a part of the
 HOL-Light Logic library using https://github.com/Deducteam/hol2dk.
 """
-homepage: "https://github.com/Deducteam/rocq-hollight-fole"
-dev-repo: "git+https://github.com/Deducteam/rocq-hollight-fole.git"
-bug-reports: "https://github.com/Deducteam/rocq-hollight-fole/issues"
-doc: "https://github.com/Deducteam/rocq-hollight-fole"
+homepage: "https://github.com/Deducteam/rocq-hollight-unif"
+dev-repo: "git+https://github.com/Deducteam/rocq-hollight-unif.git"
+bug-reports: "https://github.com/Deducteam/rocq-hollight-unif/issues"
+doc: "https://github.com/Deducteam/rocq-hollight-unif"
 maintainer: "antoine.gontard@inria.fr"
 authors: ["Antoine Gontard"]
 license: "CeCILL-2.1"
@@ -21,7 +21,7 @@ depends: [
 build: [make "-j%{jobs}%"]
 install: [make "install"]
 tags: [
-  "logpath:HOLLight_Logic_fole"
+  "logpath:HOLLight_Unif"
   "date:2025-10-16"
   "keyword:HOL-Light"
   "keyword:first order logic"
