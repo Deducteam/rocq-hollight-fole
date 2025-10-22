@@ -13,7 +13,7 @@ opam_version=2.3.0
 dune_version=3.20.2
 camlp5_version=8.03.06
 
-hollight_file=Logic/make_upto_fole.ml
+hollight_file=Logic/make_upto_unif.ml
 base=`basename $hollight_file .ml`
 dump_simp_option=
 lpfile=mappings.lp
