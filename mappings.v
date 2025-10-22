@@ -1927,8 +1927,6 @@ Set Elimination Schemes.
 
 HB.instance Definition _ := is_Type' (V 0).
 
-Definition list term := list term.
-
 Unset Implicit Arguments.
 
 (* defining induction principles and tactics *)
